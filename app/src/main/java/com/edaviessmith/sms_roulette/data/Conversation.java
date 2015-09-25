@@ -1,5 +1,7 @@
 package com.edaviessmith.sms_roulette.data;
 
+import com.edaviessmith.sms_roulette.App;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,12 +12,28 @@ public class Conversation {
 
     private int id;
     private Contact contact;
-    private String phone;
+    private String number;
 
     private List<SMSData> smsDataList;
 
     public Conversation() {
         smsDataList = new ArrayList<>();
+    }
+
+    /**
+     *
+     * @param smsData
+     * @return
+     */
+    public boolean addSmsData(SMSData smsData) {
+
+        //TODO maybe use a more efficient way to check for duplicates
+        for(SMSData msg: smsDataList) {
+            if(smsData.getId() == msg.getId()) return false;
+        }
+
+        smsDataList.add(smsData);
+        return true;
     }
 
     public List<SMSData> getSmsDataList() {
@@ -26,6 +44,7 @@ public class Conversation {
         this.smsDataList = smsDataList;
     }
 
+
     public Contact getContact() {
         return contact;
     }
@@ -34,12 +53,12 @@ public class Conversation {
         this.contact = contact;
     }
 
-    public String getPhone() {
-        return phone;
+    public String getNumber() {
+        return number;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setNumber(String number) {
+        this.number = App.simplePhone(number);
     }
 
     public void setId(int id) {

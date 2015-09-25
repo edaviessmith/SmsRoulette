@@ -16,15 +16,17 @@ import android.widget.TextView;
 import com.edaviessmith.sms_roulette.data.Conversation;
 import com.edaviessmith.sms_roulette.data.SMSData;
 
-import java.util.ArrayList;
-
 
 public class Chat extends ActionBarActivity {
 
     App app;
-    ArrayList<SMSData> conversationList;
+
+    Conversation conversation;
+
     ConversationAdapter conversationAdapter;
     ListView conversation_lv;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,13 +38,9 @@ public class Chat extends ActionBarActivity {
 
         Intent intent = getIntent();
         int conversationKey = intent.getIntExtra("conversation", 0);
-        Conversation conversation = app.getConversationList().get(conversationKey);
+        conversation = app.getConversationList().get(conversationKey);
 
-        app.readConversations(conversation.getPhone());
-
-        conversationList = new ArrayList<>();
-        conversationList.clear();
-        conversationList.addAll(conversation.getSmsDataList());
+        app.readConversations(conversation);
 
         conversation_lv = (ListView) findViewById(R.id.conversation_lv);
         conversationAdapter = new ConversationAdapter(this);
@@ -60,12 +58,13 @@ public class Chat extends ActionBarActivity {
 
         @Override
         public int getCount() {
-            return conversationList.size();
+            return conversation.getSmsDataList().size();
         }
 
         @Override
         public SMSData getItem(int position) {
-            return conversationList.get(position);
+
+            return conversation.getSmsDataList().get((getCount() - 1) - position);
         }
 
         @Override
@@ -84,8 +83,9 @@ public class Chat extends ActionBarActivity {
 
             SMSData smsData = getItem(position);
 
-
-             holder.name_tv.setText(smsData.getBody());
+            holder.name_tv.setText(smsData.getBody());
+            holder.date_tv.setText(Var.getTimeSince(smsData.getDate().getTime()));
+            holder.message_tv.setVisibility(View.GONE);
 
 
             return convertView;
@@ -94,8 +94,8 @@ public class Chat extends ActionBarActivity {
 
         class ViewHolder {
             TextView name_tv,
-                    date_tv,
-                    message_tv;
+                     date_tv,
+                     message_tv;
 
             public ViewHolder(View view) {
                 message_tv = (TextView) view.findViewById(R.id.message_tv);

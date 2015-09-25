@@ -94,7 +94,7 @@ public class Messaging extends ActionBarActivity {
             if(conversation.getContact() != null) {
                 holder.name_tv.setText(conversation.getContact().getDisplayName());
             } else {
-                holder.name_tv.setText(conversation.getPhone());
+                holder.name_tv.setText(conversation.getNumber());
             }
 
             if(conversation.getSmsDataList().size() > 0) {

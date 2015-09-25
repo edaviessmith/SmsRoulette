@@ -102,7 +102,7 @@ public class App extends Application {
                         phone.setType(pCur.getInt(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE)));
                         String number = pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
 
-                        phone.setValue(number);
+                        phone.setValue(simplePhone(number));
                         contact.getInfo().add(phone);
                     }
 
@@ -116,13 +116,18 @@ public class App extends Application {
 
     }
 
+    public static String simplePhone(String number) {
+        //return number.replace("-","");
+        return number.replaceAll("([ -()]*)", "");
+    }
+
 
     /**
      * Iterate cursor through sms messages and populate conversationList
-     * @param number filter the sms messages that contain the address
+     * @conversation number filter the sms messages that contain the address
      *               or the newest for each unique address if null
      */
-    public void readConversations(String number) {
+    public void readConversations(Conversation conversation) {
         /* Add Sms to contacts */
 
         /**
@@ -134,35 +139,41 @@ public class App extends Application {
          GROUP BY phone)
          */
 
-        String selection = (number != null)? "address = \"" + number + "\"":
+        String selection = (conversation != null && conversation.getNumber() != null)?
+                               "address LIKE '" + conversation.getNumber() + "'":
                                "date IN (SELECT MAX( date ) FROM  sms GROUP BY address)";
 
         Uri sms_uri = Uri.parse("content://sms/");
-        String sortSmsOrder = "address ASC, date DESC";
+        String sortSmsOrder = "address ASC, date " + (conversation != null? "ASC":"DESC");
         /* Get the most recent message for each address */
         Cursor c = getContentResolver().query(sms_uri, null, selection, null, null);
 
         // Read the sms data and store it in the list
         if(c.moveToFirst()) {
 
-            String previousNumber = "";
-            Conversation conversation = new Conversation();
+            /* If the conversation is null create placeholder data, otherwise use it's info */
+            String previousNumber = conversation != null? conversation.getNumber(): "";
+            if(conversation == null) conversation = new Conversation();
+
             int index = 1;
 
             for(int i = 0; i < c.getCount(); i++) {
 
                 SMSData sms = new SMSData();
+
+                sms.setId(c.getInt(c.getColumnIndexOrThrow("_id")));
                 sms.setNumber(c.getString(c.getColumnIndexOrThrow("address")));
                 sms.setBody(c.getString(c.getColumnIndexOrThrow("body")));
 
-                String dt = c.getString(c.getColumnIndexOrThrow("date"));
-                sms.setDate(new Date(Long.valueOf(dt)));
+                Long milis = c.getLong(c.getColumnIndexOrThrow("date")) / 1000;
+                //TODO: change date to Cal whenever
+                //Calendar.getInstance().setTimeInMillis(milis);
+                sms.setDate(new Date(Long.valueOf(milis)));
 
 
                 if(!previousNumber.equals(sms.getNumber())) {
 
-                    conversation = new Conversation();
-                    conversation.setPhone(sms.getNumber());
+                    boolean hasContact = false;
 
                     findContact:
                     for (Contact contact : contactList) {
@@ -171,18 +182,36 @@ public class App extends Application {
                                 if (phoneInfo.getValue().equals(sms.getNumber())) {
                                     /* The contact's number matches, set the contact */
                                     conversation.setContact(contact);
+                                    hasContact = true;
                                     break findContact;
                                 }
                             }
                         }
                     }
 
-                    conversation.setId(index);  /* Add Map Id for bidirectionallity */
-                    conversationList.put(index++, conversation);
+                    /* Check if a previous conversation has the same phone */
+                    findNumber:
+                    if(!hasContact) {
+                        for (Conversation conv : conversationList.values()) {
+                            if(conv.getNumber().equals(sms.getNumber())) {
+                                conversation = conv;
+                                break findNumber;
+                            }
+                        }
+
+                        conversation = new Conversation();
+                        conversation.setNumber(sms.getNumber());
+                    }
+
+                    /* Add the conversation to the list if it isn't already there (Redundant Check) */
+                    if(!conversationList.containsValue(conversation)) {
+                        conversation.setId(index);  /* Add Map Id for bidirectionallity */
+                        conversationList.put(index++, conversation);
+                    }
                 }
 
                 /* Add Sms to the conversation */
-                conversation.getSmsDataList().add(sms);
+                conversation.addSmsData(sms);
                 previousNumber = sms.getNumber();
 
                 c.moveToNext();
@@ -191,5 +220,10 @@ public class App extends Application {
 
         c.close();
     }
+
+
+
+
+
 
 }
