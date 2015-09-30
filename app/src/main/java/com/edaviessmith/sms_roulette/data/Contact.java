@@ -1,5 +1,7 @@
 package com.edaviessmith.sms_roulette.data;
 
+import android.net.Uri;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,10 +10,12 @@ import java.util.List;
  */
 public class Contact {
 
-    private String id;
+    private long id;
     private String displayName;
 
     private List<Info> info;
+    private Uri thumbUri;
+    private Uri photoUri;
 
     public Contact() {
         info = new ArrayList<>();
@@ -25,7 +29,7 @@ public class Contact {
         this.info = info;
     }
 
-    public void setId(String id) {
+    public void setId(long id) {
         this.id = id;
     }
 
@@ -35,5 +39,25 @@ public class Contact {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public void setThumbUri(Uri thumbUri) {
+        this.thumbUri = thumbUri;
+    }
+
+    public Uri getThumbUri() {
+        return thumbUri;
+    }
+
+    public void setPhotoUri(Uri photoUri) {
+        this.photoUri = photoUri;
+    }
+
+    public Uri getPhotoUri() {
+        return photoUri;
+    }
+
+    public long getId() {
+        return id;
     }
 }

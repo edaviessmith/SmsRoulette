@@ -2,6 +2,7 @@ package com.edaviessmith.sms_roulette;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -91,16 +93,25 @@ public class Messaging extends ActionBarActivity {
 
             Conversation conversation = getItem(position);
 
+
             if(conversation.getContact() != null) {
                 holder.name_tv.setText(conversation.getContact().getDisplayName());
+
+                Bitmap b = app.getPhotoFromUri(conversation.getContact());
+                holder.photo_iv.setImageBitmap(b);
             } else {
                 holder.name_tv.setText(conversation.getNumber());
+
+                holder.photo_iv.setImageResource(R.drawable.ic_launcher);
             }
+            //Log.d("chat", "phone: "+conversation.getNumber());
 
             if(conversation.getSmsDataList().size() > 0) {
                 holder.message_tv.setText(conversation.getSmsDataList().get(0).getBody());
                 holder.date_tv.setText(Var.getTimeSince(conversation.getSmsDataList().get(0).getDate().getTime()));
             }
+
+
 
             return convertView;
 
@@ -110,11 +121,13 @@ public class Messaging extends ActionBarActivity {
             TextView name_tv,
                      date_tv,
                      message_tv;
+            ImageView photo_iv;
 
             public ViewHolder(View view) {
                 message_tv = (TextView) view.findViewById(R.id.message_tv);
                 name_tv = (TextView) view.findViewById(R.id.name_tv);
                 date_tv = (TextView) view.findViewById(R.id.date_tv);
+                photo_iv = (ImageView) view.findViewById(R.id.photo_iv);
             }
         }
 

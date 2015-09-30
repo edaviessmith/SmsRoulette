@@ -2,6 +2,7 @@ package com.edaviessmith.sms_roulette;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
@@ -85,6 +86,13 @@ public class Chat extends ActionBarActivity {
 
             holder.name_tv.setText(smsData.getBody());
             holder.date_tv.setText(Var.getTimeSince(smsData.getDate().getTime()));
+
+            if(smsData.getType() == Var.MsgType.SENT) {
+                holder.name_tv.setTextColor(Color.BLUE);
+            } else {
+                holder.name_tv.setTextColor(Color.BLACK);
+            }
+
             holder.message_tv.setVisibility(View.GONE);
 
 

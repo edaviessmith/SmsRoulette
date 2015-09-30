@@ -1,5 +1,6 @@
 package com.edaviessmith.sms_roulette;
 
+import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
@@ -9,6 +10,8 @@ import java.util.Locale;
  */
 public class Var {
     public enum Category {PHONE}
+    public enum MsgType {RECEIVED, SENT, DRAFT, OTHER}
+
 
 
     public static String getTimeSince(long publishedDate) {
@@ -36,6 +39,16 @@ public class Var {
         }
 
         return date;
+    }
+
+    public static boolean validateURI(String uri) {
+        final URI u;
+        try {
+            u = URI.create(uri);
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
     }
 
 }

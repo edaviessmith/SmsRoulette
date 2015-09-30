@@ -12,18 +12,31 @@ public class Conversation {
 
     private int id;
     private Contact contact;
-    private String number;
+    private String number;             // Used for organising conversations
+
+    private List<String> rawNumbers;   // Used for querying sms messages
 
     private List<SMSData> smsDataList;
 
     public Conversation() {
         smsDataList = new ArrayList<>();
+        rawNumbers = new ArrayList<>();
+    }
+
+
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
     }
 
     /**
      *
      * @param smsData
-     * @return
+     * @return true if the sms data was added
      */
     public boolean addSmsData(SMSData smsData) {
 
@@ -40,10 +53,10 @@ public class Conversation {
         return smsDataList;
     }
 
+
     public void setSmsDataList(List<SMSData> smsDataList) {
         this.smsDataList = smsDataList;
     }
-
 
     public Contact getContact() {
         return contact;
@@ -61,11 +74,15 @@ public class Conversation {
         this.number = App.simplePhone(number);
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public List<String> getRawNumbers() {
+        return rawNumbers;
     }
 
-    public int getId() {
-        return id;
+    public void setRawNumbers(List<String> rawNumbers) {
+        this.rawNumbers = rawNumbers;
+    }
+
+    public void addRawNumber(String number) {
+        if(!rawNumbers.contains(number)) rawNumbers.add(number);
     }
 }

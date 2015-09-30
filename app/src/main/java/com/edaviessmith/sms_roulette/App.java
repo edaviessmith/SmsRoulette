@@ -2,8 +2,11 @@ package com.edaviessmith.sms_roulette;
 
 import android.app.Application;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.ContactsContract;
 
@@ -12,6 +15,7 @@ import com.edaviessmith.sms_roulette.data.Conversation;
 import com.edaviessmith.sms_roulette.data.Info;
 import com.edaviessmith.sms_roulette.data.SMSData;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -68,6 +72,53 @@ public class App extends Application {
 
 
 
+    public Bitmap getPhotoFromUri(Contact contact) {
+
+        /*AssetFileDescriptor afd = null;
+        try {
+
+            //Uri thumbUri;
+            //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            //thumbUri = Uri.parse(photo);
+            *//*} else {
+                final Uri contactUri = Uri.withAppendedPath(Contacts.CONTENT_URI, photoData);
+                thumbUri = Uri.withAppendedPath(contactUri, Photo.CONTENT_DIRECTORY);
+            }*//*
+            ContentResolver cr = context.getContentResolver();
+            afd = cr.openAssetFileDescriptor(photo, "r");
+            FileDescriptor fileDescriptor = afd.getFileDescriptor();
+            if (fileDescriptor != null)
+                return BitmapFactory.decodeFileDescriptor(fileDescriptor, null, null);
+        } catch (FileNotFoundException e) {
+        } finally {
+            if (afd != null) {
+                try {
+                    afd.close();
+                } catch (IOException e) {
+                }
+            }
+        }*/
+
+        //return null;
+
+        Uri photoUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contact.getId());
+        InputStream input = ContactsContract.Contacts.openContactPhotoInputStream(
+                context.getContentResolver(), photoUri);
+        if (input != null) {
+            return BitmapFactory.decodeStream(input);
+        }
+
+        /*if (photo != null) {
+            InputStream input = ContactsContract.Contacts.openContactPhotoInputStream(context.getContentResolver(), photo);
+            if (input != null) {
+                return BitmapFactory.decodeStream(input);
+            }
+        }*/
+
+
+        return BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_menu_report_image);
+    }
+
 
     public void readContacts() {
 
@@ -78,31 +129,46 @@ public class App extends Application {
         Cursor cur = cr.query(uri, null, null, null, sortOrder);
         if(cur.getCount() > 0)
         {
-            String id;
+            long id;
             String name;
+            String thumbUri;
+            String photoUri;
+
             while(cur.moveToNext())
             {
                 Contact contact = new Contact();
-                id = cur.getString(cur.getColumnIndex(ContactsContract.Contacts._ID));
-                name = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
+                id       = cur.getLong(cur.getColumnIndex(ContactsContract.Contacts._ID));
+                name     = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
+                thumbUri = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI));
+                photoUri = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.PHOTO_URI));
 
                 contact.setId(id);
                 contact.setDisplayName(name);
+
+
+                if(Var.validateURI(thumbUri)) contact.setThumbUri(Uri.parse(thumbUri));
+                if(Var.validateURI(photoUri)) contact.setPhotoUri(Uri.parse(photoUri));
+
 
                 if (Integer.parseInt(cur.getString(cur.getColumnIndex
                         (ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
 
                     Cursor pCur = cr.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                             null, ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
-                            new String[]{id}, null);
+                            new String[]{String.valueOf(id)}, null);
+
+                    int type;
+                    String number;
 
                     while (pCur.moveToNext()) {
 
                         Info phone = new Info(Var.Category.PHONE);
-                        phone.setType(pCur.getInt(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE)));
-                        String number = pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+                        type   = pCur.getInt(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE));
+                        number = pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
 
+                        phone.setType(type);
                         phone.setValue(simplePhone(number));
+
                         contact.getInfo().add(phone);
                     }
 
@@ -116,9 +182,27 @@ public class App extends Application {
 
     }
 
+    /**
+     * Regex to remove unneeded characters to help filtering
+     * @param number String to be trimmed
+     * @return The phone number
+     */
     public static String simplePhone(String number) {
-        //return number.replace("-","");
-        return number.replaceAll("([ -()]*)", "");
+        return number.replaceAll("((\\+1)?[\\- ()\\.]*)", "");
+    }
+
+    public Var.MsgType getMsgType(String type) {
+
+        switch (type) {
+            case "1":
+                return Var.MsgType.RECEIVED;
+            case "2":
+                return Var.MsgType.SENT;
+            case "3":
+                return Var.MsgType.DRAFT;
+        }
+
+        return Var.MsgType.OTHER;
     }
 
 
@@ -133,15 +217,24 @@ public class App extends Application {
         /**
          * TODO: Use SQL to get the most recent message for each number
          SELECT * FROM  `message`
-         WHERE DATE
-         IN (SELECT MAX( DATE )
-         FROM  `message`
-         GROUP BY phone)
+         WHERE DATE IN (SELECT MAX( DATE )
+                        FROM  `message`
+                        GROUP BY phone)
          */
 
-        String selection = (conversation != null && conversation.getNumber() != null)?
-                               "address LIKE '" + conversation.getNumber() + "'":
-                               "date IN (SELECT MAX( date ) FROM  sms GROUP BY address)";
+        String selection;
+
+        if(conversation != null && conversation.getNumber() != null) {
+
+            StringBuilder sb = new StringBuilder();
+            for(String s: conversation.getRawNumbers()) {
+                sb.append(s).append("', '");
+            }
+
+            selection = "address IN ('" + sb.substring(0, sb.length() - 3) + ")";
+        } else {
+            selection = "date IN (SELECT MAX( date ) FROM  sms GROUP BY address)";
+        }
 
         Uri sms_uri = Uri.parse("content://sms/");
         String sortSmsOrder = "address ASC, date " + (conversation != null? "ASC":"DESC");
@@ -157,60 +250,77 @@ public class App extends Application {
 
             int index = 1;
 
+            int id;
+            String body, address;
+            Var.MsgType type;
+            Long date;
+
             for(int i = 0; i < c.getCount(); i++) {
 
                 SMSData sms = new SMSData();
 
-                sms.setId(c.getInt(c.getColumnIndexOrThrow("_id")));
-                sms.setNumber(c.getString(c.getColumnIndexOrThrow("address")));
-                sms.setBody(c.getString(c.getColumnIndexOrThrow("body")));
+                id      = c.getInt(c.getColumnIndexOrThrow("_id"));
+                body    = c.getString(c.getColumnIndexOrThrow("body"));
+                type    = getMsgType(c.getString(c.getColumnIndexOrThrow("type")));
+                address = c.getString(c.getColumnIndexOrThrow("address"));
+                date    = c.getLong(c.getColumnIndexOrThrow("date")) / 1000;
 
-                Long milis = c.getLong(c.getColumnIndexOrThrow("date")) / 1000;
+                sms.setId(id);
+                sms.setBody(body);
+                sms.setType(type);
+                sms.setNumber(address);
+                sms.setDate(new Date(date));
+
                 //TODO: change date to Cal whenever
                 //Calendar.getInstance().setTimeInMillis(milis);
-                sms.setDate(new Date(Long.valueOf(milis)));
-
 
                 if(!previousNumber.equals(sms.getNumber())) {
 
-                    boolean hasContact = false;
+                    boolean hasConversation = false;
 
-                    findContact:
-                    for (Contact contact : contactList) {
-                        if (contact.getInfo() != null) {
-                            for (Info phoneInfo : contact.getInfo()) {
-                                if (phoneInfo.getValue().equals(sms.getNumber())) {
-                                    /* The contact's number matches, set the contact */
-                                    conversation.setContact(contact);
-                                    hasContact = true;
-                                    break findContact;
-                                }
-                            }
+                    /* Check if a previous conversation has the same phone */
+                    for (Conversation conv : conversationList.values()) {
+                        if(conv.getNumber().equals(sms.getNumber())) {
+                            conversation = conv;
+
+                            hasConversation = true;
+                            break;
                         }
                     }
 
-                    /* Check if a previous conversation has the same phone */
-                    findNumber:
-                    if(!hasContact) {
-                        for (Conversation conv : conversationList.values()) {
-                            if(conv.getNumber().equals(sms.getNumber())) {
-                                conversation = conv;
-                                break findNumber;
+                    findContact:
+                    if(!hasConversation) {
+
+                        /* Create a new conversation */
+                        conversation = new Conversation();
+                        conversation.setNumber(sms.getNumber());
+
+                        /* Search for a matching contact */
+                        for (Contact contact : contactList) {
+                            if (contact.getInfo() != null) {
+                                for (Info phoneInfo : contact.getInfo()) {
+                                    if (phoneInfo.getValue().equals(sms.getNumber())) {
+                                        /* The contact's number matches, set the contact and break */
+                                        conversation.setContact(contact);
+
+                                        break findContact;
+                                    }
+                                }
                             }
                         }
 
-                        conversation = new Conversation();
-                        conversation.setNumber(sms.getNumber());
                     }
 
                     /* Add the conversation to the list if it isn't already there (Redundant Check) */
                     if(!conversationList.containsValue(conversation)) {
+                        //TODO: index should not be used (too much thought and slow)
                         conversation.setId(index);  /* Add Map Id for bidirectionallity */
                         conversationList.put(index++, conversation);
                     }
                 }
 
                 /* Add Sms to the conversation */
+                conversation.addRawNumber(address);
                 conversation.addSmsData(sms);
                 previousNumber = sms.getNumber();
 
@@ -220,10 +330,6 @@ public class App extends Application {
 
         c.close();
     }
-
-
-
-
 
 
 }

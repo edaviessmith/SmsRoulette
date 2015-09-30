@@ -1,6 +1,7 @@
 package com.edaviessmith.sms_roulette.data;
 
 import com.edaviessmith.sms_roulette.App;
+import com.edaviessmith.sms_roulette.Var;
 
 import java.util.Date;
 
@@ -12,6 +13,7 @@ public class SMSData {
     private String number;
     private String body;
     private Date date;
+    private Var.MsgType type;
 
     public int getId() {
         return id;
@@ -43,5 +45,13 @@ public class SMSData {
 
     public String getBody() {
         return body;
+    }
+
+    public void setType(Var.MsgType type) {
+        this.type = type;
+    }
+
+    public Var.MsgType getType() {
+        return type;
     }
 }
