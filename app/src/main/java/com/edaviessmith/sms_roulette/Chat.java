@@ -112,7 +112,6 @@ public class Chat extends ActionBarActivity {
             }
         }
 
-
     }
 
 

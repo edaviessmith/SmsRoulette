@@ -12,6 +12,7 @@ public class Var {
     public enum Category {PHONE}
     public enum MsgType {RECEIVED, SENT, DRAFT, OTHER}
 
+    public static int LIMIT = 20;
 
 
     public static String getTimeSince(long publishedDate) {
@@ -39,6 +40,29 @@ public class Var {
         }
 
         return date;
+    }
+
+    /**
+     * Regex to remove unneeded characters to help filtering
+     * @param number String to be trimmed
+     * @return The phone number
+     */
+    public static String simplePhone(String number) {
+        return number.replaceAll("((\\+1)?[\\- ()\\.]*)", "");
+    }
+
+    public static Var.MsgType getMsgType(String type) {
+
+        switch (type) {
+            case "1":
+                return Var.MsgType.RECEIVED;
+            case "2":
+                return Var.MsgType.SENT;
+            case "3":
+                return Var.MsgType.DRAFT;
+        }
+
+        return Var.MsgType.OTHER;
     }
 
     public static boolean validateURI(String uri) {

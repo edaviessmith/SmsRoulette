@@ -38,10 +38,10 @@ public class Messaging extends ActionBarActivity {
 
         //TODO: Sort conversations by the most recent message
 
-        conversation_lv = (ListView) findViewById(R.id.messaging_lv);
         messagingAdapter = new MessagingAdapter(this);
-        conversation_lv.setAdapter(messagingAdapter);
 
+        conversation_lv = (ListView) findViewById(R.id.messaging_lv);
+        conversation_lv.setAdapter(messagingAdapter);
         conversation_lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
@@ -62,8 +62,6 @@ public class Messaging extends ActionBarActivity {
         public MessagingAdapter(Context context) {
             inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         }
-
-
 
 
         @Override
@@ -104,13 +102,11 @@ public class Messaging extends ActionBarActivity {
 
                 holder.photo_iv.setImageResource(R.drawable.ic_launcher);
             }
-            //Log.d("chat", "phone: "+conversation.getNumber());
 
             if(conversation.getSmsDataList().size() > 0) {
                 holder.message_tv.setText(conversation.getSmsDataList().get(0).getBody());
                 holder.date_tv.setText(Var.getTimeSince(conversation.getSmsDataList().get(0).getDate().getTime()));
             }
-
 
 
             return convertView;
@@ -124,10 +120,10 @@ public class Messaging extends ActionBarActivity {
             ImageView photo_iv;
 
             public ViewHolder(View view) {
-                message_tv = (TextView) view.findViewById(R.id.message_tv);
-                name_tv = (TextView) view.findViewById(R.id.name_tv);
-                date_tv = (TextView) view.findViewById(R.id.date_tv);
-                photo_iv = (ImageView) view.findViewById(R.id.photo_iv);
+                message_tv = (TextView)  view.findViewById(R.id.message_tv);
+                name_tv    = (TextView)  view.findViewById(R.id.name_tv);
+                date_tv    = (TextView)  view.findViewById(R.id.date_tv);
+                photo_iv   = (ImageView) view.findViewById(R.id.photo_iv);
             }
         }
 

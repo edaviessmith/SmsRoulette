@@ -115,9 +115,10 @@ public class App extends Application {
             }
         }*/
 
-
         return BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_menu_report_image);
     }
+
+
 
 
     public void readContacts() {
@@ -145,7 +146,6 @@ public class App extends Application {
                 contact.setId(id);
                 contact.setDisplayName(name);
 
-
                 if(Var.validateURI(thumbUri)) contact.setThumbUri(Uri.parse(thumbUri));
                 if(Var.validateURI(photoUri)) contact.setPhotoUri(Uri.parse(photoUri));
 
@@ -167,7 +167,7 @@ public class App extends Application {
                         number = pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
 
                         phone.setType(type);
-                        phone.setValue(simplePhone(number));
+                        phone.setValue(Var.simplePhone(number));
 
                         contact.getInfo().add(phone);
                     }
@@ -180,29 +180,6 @@ public class App extends Application {
         }
         cur.close();
 
-    }
-
-    /**
-     * Regex to remove unneeded characters to help filtering
-     * @param number String to be trimmed
-     * @return The phone number
-     */
-    public static String simplePhone(String number) {
-        return number.replaceAll("((\\+1)?[\\- ()\\.]*)", "");
-    }
-
-    public Var.MsgType getMsgType(String type) {
-
-        switch (type) {
-            case "1":
-                return Var.MsgType.RECEIVED;
-            case "2":
-                return Var.MsgType.SENT;
-            case "3":
-                return Var.MsgType.DRAFT;
-        }
-
-        return Var.MsgType.OTHER;
     }
 
 
@@ -232,12 +209,20 @@ public class App extends Application {
             }
 
             selection = "address IN ('" + sb.substring(0, sb.length() - 3) + ")";
+            if(!conversation.getSmsDataList().isEmpty()) {
+                selection += " AND date < " + conversation.getSmsDataList().get(conversation.getSmsDataList().size() - 1);
+            }
         } else {
             selection = "date IN (SELECT MAX( date ) FROM  sms GROUP BY address)";
         }
 
         Uri sms_uri = Uri.parse("content://sms/");
+
+        //TODO: SQL pagination needed to quicken queries and loading
+
         String sortSmsOrder = "address ASC, date " + (conversation != null? "ASC":"DESC");
+
+
         /* Get the most recent message for each address */
         Cursor c = getContentResolver().query(sms_uri, null, selection, null, null);
 
@@ -255,13 +240,13 @@ public class App extends Application {
             Var.MsgType type;
             Long date;
 
-            for(int i = 0; i < c.getCount(); i++) {
+            for(int i = 0; i < c.getCount() && i <= Var.LIMIT; i++) {
 
                 SMSData sms = new SMSData();
 
                 id      = c.getInt(c.getColumnIndexOrThrow("_id"));
                 body    = c.getString(c.getColumnIndexOrThrow("body"));
-                type    = getMsgType(c.getString(c.getColumnIndexOrThrow("type")));
+                type    = Var.getMsgType(c.getString(c.getColumnIndexOrThrow("type")));
                 address = c.getString(c.getColumnIndexOrThrow("address"));
                 date    = c.getLong(c.getColumnIndexOrThrow("date")) / 1000;
 

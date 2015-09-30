@@ -1,6 +1,6 @@
 package com.edaviessmith.sms_roulette.data;
 
-import com.edaviessmith.sms_roulette.App;
+import com.edaviessmith.sms_roulette.Var;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +71,7 @@ public class Conversation {
     }
 
     public void setNumber(String number) {
-        this.number = App.simplePhone(number);
+        this.number = Var.simplePhone(number);
     }
 
     public List<String> getRawNumbers() {
