@@ -9,12 +9,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/conversation_lv"
-        android:stackFromBottom="true"
+        android:divider="@android:color/transparent"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_above="@+id/relativeLayout" />
 
+    <!--    android:stackFromBottom="true"
+        android:transcriptMode="alwaysScroll"-->
 
     <RelativeLayout
         android:layout_alignParentBottom="true"
@@ -26,6 +28,7 @@
             android:id="@+id/message_tv"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="5dp"
             android:layout_toLeftOf="@+id/send_iv"
             android:layout_toStartOf="@+id/send_iv" />
 

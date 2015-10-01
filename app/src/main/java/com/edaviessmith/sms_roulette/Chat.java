@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,7 +40,7 @@ public class Chat extends ActionBarActivity {
         setContentView(R.layout.act_conversation);
 
         app = (App) getApplication();
-
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         Intent intent = getIntent();
         int conversationKey = intent.getIntExtra("conversation", 0);
@@ -66,15 +65,15 @@ public class Chat extends ActionBarActivity {
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
 
-                Log.d("Scroll", (firstVisibleItem + visibleItemCount) + " / " + (totalItemCount));
-
-                if (chatState == Var.Feed.IDLE && (firstVisibleItem + visibleItemCount + (totalItemCount / 4)) > totalItemCount) {
+                /* Count is to 0 because the ListView stacks from the bottom */
+                if (chatState == Var.Feed.IDLE && (firstVisibleItem - (totalItemCount / 4)) < 0) {
                     chatState = Var.Feed.PENDING;
 
                     int limit = Math.min(120, totalItemCount);
-
                     new RetrieveChatTask(Chat.this, limit).execute(conversation);
                 }
+
+                //view.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
             }
 
         });
@@ -92,21 +91,24 @@ public class Chat extends ActionBarActivity {
         }
 
         @Override
-        public void notifyDataSetChanged() {
-            super.notifyDataSetChanged();
-
-            smsDataList = conversation.sortedSmsData();
-        }
-
-        @Override
         public int getCount() {
             return smsDataList.size();
         }
 
         @Override
         public SmsData getItem(int position) {
-
+            //return smsDataList.get(position);
             return smsDataList.get((getCount() - 1) - position);
+        }
+
+        @Override
+        public int getViewTypeCount() {
+            return 2;   // Sent and Receive
+        }
+
+        @Override
+        public int getItemViewType(int position) {
+            return getItem(position).getType() == Var.MsgType.SENT ? 0 : 1;
         }
 
         @Override
@@ -116,8 +118,14 @@ public class Chat extends ActionBarActivity {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
+
             if(convertView == null) {
-                convertView = inflater.inflate(R.layout.item_chat, parent, false);
+
+                if (getItemViewType(position) == 0)
+                    convertView = inflater.inflate(R.layout.item_chat, parent, false);
+                else
+                    convertView = inflater.inflate(R.layout.item_chat_receive, parent, false);
+
                 ViewHolder holder = new ViewHolder(convertView);
                 convertView.setTag(holder);
             }
@@ -130,11 +138,10 @@ public class Chat extends ActionBarActivity {
 
             if(smsData.getType() == Var.MsgType.SENT) {
                 holder.bubble_v.setBackgroundResource(R.drawable.bubble);
+
             } else {
                 holder.bubble_v.setBackgroundResource(R.drawable.bubble2);
             }
-
-            holder.message_tv.setVisibility(View.GONE);
 
 
             return convertView;
@@ -171,7 +178,15 @@ public class Chat extends ActionBarActivity {
         @Override
         protected Void doInBackground(Conversation... conversations) {
 
-            smsDataList = chat.app.readConversations(conversations[0], limit);
+            List<SmsData> nextSmsList = chat.app.readConversations(conversations[0], limit);
+
+            /* Add data to the conversation list and get a list of smsData that has not been added yet */
+            smsDataList = chat.conversation.checkSmsData(nextSmsList);
+            try {
+                Thread.sleep(500);
+            } catch (Exception e) {
+
+            }
             return null;
         }
 
@@ -179,9 +194,9 @@ public class Chat extends ActionBarActivity {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
 
-            chat.chatState = Var.Feed.IDLE;
-            chat.conversation.addSmsData(smsDataList);
-            chat.conversationAdapter.smsDataList = chat.conversation.sortedSmsData();
+            chat.chatState = smsDataList.isEmpty() ? Var.Feed.DONE : Var.Feed.IDLE;
+
+            chat.conversationAdapter.smsDataList.addAll(smsDataList);
             chat.conversationAdapter.notifyDataSetChanged();
         }
     }
@@ -191,6 +206,7 @@ public class Chat extends ActionBarActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_conversation, menu);
+
         return true;
     }
 

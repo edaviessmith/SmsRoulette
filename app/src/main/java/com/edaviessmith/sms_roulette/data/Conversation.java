@@ -1,5 +1,7 @@
 package com.edaviessmith.sms_roulette.data;
 
+import android.util.Log;
+
 import com.edaviessmith.sms_roulette.Var;
 
 import java.util.ArrayList;
@@ -43,6 +45,13 @@ public class Conversation {
      */
     public boolean addSmsData(SmsData smsData) {
 
+        if (!checkSmsData(smsData)) return false;
+
+        smsDataList.put(smsData.getDate(), smsData);
+        return true;
+    }
+
+    public boolean checkSmsData(SmsData smsData) {
         if (smsDataList.containsKey(smsData.getDate())) return false;
 
         if (newestMessage == 0L || smsData.getDate() > newestMessage)
@@ -50,7 +59,6 @@ public class Conversation {
         if (oldestMessage == 0L || smsData.getDate() < oldestMessage)
             oldestMessage = smsData.getDate();
 
-        smsDataList.put(smsData.getDate(), smsData);
         return true;
     }
 
@@ -58,8 +66,24 @@ public class Conversation {
         for (SmsData smsData : smsDataList) {
             addSmsData(smsData);
         }
+
+        Log.d("Conv", "addList " + smsDataList.size());
     }
 
+
+    public List<SmsData> checkSmsData(List<SmsData> checkSmsDataList) {
+
+        for (SmsData smsData : checkSmsDataList) {
+            /* Remove duplicates and set new and old longs */
+            if (!checkSmsData(smsData)) {
+                checkSmsDataList.remove(smsData);
+            } else {
+                smsDataList.put(smsData.getDate(), smsData);
+            }
+        }
+
+        return checkSmsDataList;
+    }
 
     public ArrayList<SmsData> sortedSmsData() {
         ArrayList<Long> dates = new ArrayList<>(smsDataList.keySet());
