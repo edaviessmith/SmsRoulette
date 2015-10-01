@@ -25,6 +25,7 @@ public class Messaging extends ActionBarActivity {
     ListView conversation_lv;
     MessagingAdapter messagingAdapter;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,7 +34,7 @@ public class Messaging extends ActionBarActivity {
         app = (App) getApplication();
 
         app.readContacts();
-        app.readConversations(null);
+        app.queryConversations();
 
 
         //TODO: Sort conversations by the most recent message
@@ -53,6 +54,7 @@ public class Messaging extends ActionBarActivity {
                 startActivity(i);
             }
         });
+
     }
 
     public class MessagingAdapter extends BaseAdapter {
@@ -103,20 +105,19 @@ public class Messaging extends ActionBarActivity {
                 holder.photo_iv.setImageResource(R.drawable.ic_launcher);
             }
 
-            if(conversation.getSmsDataList().size() > 0) {
-                holder.message_tv.setText(conversation.getSmsDataList().get(0).getBody());
-                holder.date_tv.setText(Var.getTimeSince(conversation.getSmsDataList().get(0).getDate().getTime()));
+            if (!conversation.getSmsDataList().isEmpty()) {
+                holder.message_tv.setText(conversation.getSmsDataList().get(conversation.getNewestMessage()).getBody());
+                holder.date_tv.setText(Var.getTimeSince(conversation.getSmsDataList().get(conversation.getNewestMessage()).getDate()));
             }
 
 
             return convertView;
-
         }
 
         class ViewHolder {
             TextView name_tv,
-                     date_tv,
-                     message_tv;
+                    date_tv,
+                    message_tv;
             ImageView photo_iv;
 
             public ViewHolder(View view) {
@@ -126,7 +127,6 @@ public class Messaging extends ActionBarActivity {
                 photo_iv   = (ImageView) view.findViewById(R.id.photo_iv);
             }
         }
-
 
     }
 

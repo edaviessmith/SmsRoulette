@@ -3,6 +3,7 @@ package com.edaviessmith.sms_roulette;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
@@ -10,12 +11,15 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import com.edaviessmith.sms_roulette.data.Conversation;
-import com.edaviessmith.sms_roulette.data.SMSData;
+import com.edaviessmith.sms_roulette.data.SmsData;
+
+import java.util.List;
 
 
 public class Chat extends ActionBarActivity {
@@ -27,6 +31,8 @@ public class Chat extends ActionBarActivity {
     ConversationAdapter conversationAdapter;
     ListView conversation_lv;
 
+
+    Var.Feed chatState = Var.Feed.IDLE;
 
 
     @Override
@@ -41,31 +47,61 @@ public class Chat extends ActionBarActivity {
         int conversationKey = intent.getIntExtra("conversation", 0);
         conversation = app.getConversationList().get(conversationKey);
 
-        app.readConversations(conversation);
+        //TODO async conversation
+        chatState = Var.Feed.PENDING;
+        new RetrieveChatTask(Chat.this).execute(conversation);
 
-        conversation_lv = (ListView) findViewById(R.id.conversation_lv);
         conversationAdapter = new ConversationAdapter(this);
+        conversation_lv = (ListView) findViewById(R.id.conversation_lv);
         conversation_lv.setAdapter(conversationAdapter);
+
+        conversation_lv.setOnScrollListener(new AbsListView.OnScrollListener() {
+
+
+            @Override
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+
+            }
+
+            @Override
+            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                if (chatState == Var.Feed.IDLE && firstVisibleItem + visibleItemCount > totalItemCount / 2) {
+                    chatState = Var.Feed.PENDING;
+
+                    new RetrieveChatTask(Chat.this).execute(conversation);
+                }
+            }
+
+        });
     }
 
 
     public class ConversationAdapter extends BaseAdapter {
 
         private LayoutInflater inflater;
+        public List<SmsData> smsDataList;
 
         public ConversationAdapter(Context context) {
             inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            smsDataList = conversation.sortedSmsData();
+        }
+
+        @Override
+        public void notifyDataSetChanged() {
+            super.notifyDataSetChanged();
+
+            smsDataList = conversation.sortedSmsData();
         }
 
         @Override
         public int getCount() {
-            return conversation.getSmsDataList().size();
+            return smsDataList.size();
         }
 
         @Override
-        public SMSData getItem(int position) {
+        public SmsData getItem(int position) {
 
-            return conversation.getSmsDataList().get((getCount() - 1) - position);
+            return smsDataList.get((getCount() - 1) - position);
         }
 
         @Override
@@ -82,10 +118,10 @@ public class Chat extends ActionBarActivity {
             }
             final ViewHolder holder = (ViewHolder) convertView.getTag();
 
-            SMSData smsData = getItem(position);
+            SmsData smsData = getItem(position);
 
             holder.name_tv.setText(smsData.getBody());
-            holder.date_tv.setText(Var.getTimeSince(smsData.getDate().getTime()));
+            holder.date_tv.setText(Var.getTimeSince(smsData.getDate()));
 
             if(smsData.getType() == Var.MsgType.SENT) {
                 holder.name_tv.setTextColor(Color.BLUE);
@@ -112,6 +148,40 @@ public class Chat extends ActionBarActivity {
             }
         }
 
+    }
+
+    static class RetrieveChatTask extends AsyncTask<Conversation, Void, Void> {
+
+        private final Chat chat;
+        private List<SmsData> smsDataList;
+
+        public RetrieveChatTask(Chat chat) {
+            this.chat = chat;
+        }
+
+        @Override
+        protected Void doInBackground(Conversation... conversations) {
+
+            smsDataList = chat.app.readConversations(conversations[0]);
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+
+            //todo (maybe listener to know when to update the adapter)
+            chat.chatState = Var.Feed.IDLE;
+
+            chat.conversation.addSmsData(smsDataList);
+
+            // Missing sooo much logic (damn my half thinking 2h into this once brilliant refactor)
+            // *note refactor usually means having a substantial amount of code beforehand
+            chat.conversationAdapter.smsDataList = chat.conversation.sortedSmsData();
+
+            chat.conversationAdapter.notifyDataSetChanged();
+        }
     }
 
 

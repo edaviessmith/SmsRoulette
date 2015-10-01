@@ -1,18 +1,36 @@
 package com.edaviessmith.sms_roulette.data;
 
-import com.edaviessmith.sms_roulette.Var;
+import android.database.Cursor;
 
-import java.util.Date;
+import com.edaviessmith.sms_roulette.Var;
 
 /**
  * Created by Ethan on 23/09/2015.
  */
-public class SMSData {
+public class SmsData {
     private int id;
     private String number;
+    private String rawNumber;
     private String body;
-    private Date date;
+    private long date;
     private Var.MsgType type;
+
+    public SmsData() {
+    }
+
+    public SmsData(Cursor c) {
+        id = c.getInt(c.getColumnIndexOrThrow("_id"));
+        body = c.getString(c.getColumnIndexOrThrow("body"));
+        type = Var.getMsgType(c.getString(c.getColumnIndexOrThrow("type")));
+        date = c.getLong(c.getColumnIndexOrThrow("date"));
+        number = c.getString(c.getColumnIndexOrThrow("address"));
+
+        setId(id);
+        setBody(body);
+        setType(type);
+        setDate(date);
+        setNumber(number);
+    }
 
     public int getId() {
         return id;
@@ -26,16 +44,17 @@ public class SMSData {
         this.body = body;
     }
 
-    public void setDate(Date date) {
+    public void setDate(long date) {
         this.date = date;
     }
 
-    public Date getDate() {
+    public long getDate() {
         return date;
     }
 
     public void setNumber(String number) {
         this.number = Var.simplePhone(number);
+        setRawNumber(number);
     }
 
     public String getNumber() {
@@ -52,5 +71,13 @@ public class SMSData {
 
     public Var.MsgType getType() {
         return type;
+    }
+
+    public void setRawNumber(String rawNumber) {
+        this.rawNumber = rawNumber;
+    }
+
+    public String getRawNumber() {
+        return rawNumber;
     }
 }

@@ -9,8 +9,12 @@ import java.util.Locale;
  * Created by Ethan on 23/09/2015.
  */
 public class Var {
+
     public enum Category {PHONE}
+
     public enum MsgType {RECEIVED, SENT, DRAFT, OTHER}
+
+    public enum Feed {IDLE, PENDING, DONE}
 
     public static int LIMIT = 20;
 
@@ -22,7 +26,7 @@ public class Var {
             //date = context.getResources().getString(R.string.loading_date);
         } else {
             Calendar cal = Calendar.getInstance();
-            cal.setTimeInMillis(publishedDate);
+            cal.setTimeInMillis(publishedDate / 1000);
 
             Calendar now = Calendar.getInstance();
             SimpleDateFormat s;
@@ -44,6 +48,7 @@ public class Var {
 
     /**
      * Regex to remove unneeded characters to help filtering
+     *
      * @param number String to be trimmed
      * @return The phone number
      */

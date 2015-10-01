@@ -3,6 +3,8 @@ package com.edaviessmith.sms_roulette.data;
 import com.edaviessmith.sms_roulette.Var;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -16,13 +18,14 @@ public class Conversation {
 
     private List<String> rawNumbers;   // Used for querying sms messages
 
-    private List<SMSData> smsDataList;
+    private HashMap<Long, SmsData> smsDataList;
 
     public Conversation() {
-        smsDataList = new ArrayList<>();
+        smsDataList = new HashMap<>();
         rawNumbers = new ArrayList<>();
     }
 
+    private long newestMessage, oldestMessage;      //Keys to getting messages real time
 
 
     public void setId(int id) {
@@ -38,23 +41,46 @@ public class Conversation {
      * @param smsData
      * @return true if the sms data was added
      */
-    public boolean addSmsData(SMSData smsData) {
+    public boolean addSmsData(SmsData smsData) {
 
-        //TODO maybe use a more efficient way to check for duplicates
-        for(SMSData msg: smsDataList) {
-            if(smsData.getId() == msg.getId()) return false;
-        }
+        if (smsDataList.containsKey(smsData.getDate())) return false;
 
-        smsDataList.add(smsData);
+        if (newestMessage == 0L || smsData.getDate() > newestMessage)
+            newestMessage = smsData.getDate();
+        if (oldestMessage == 0L || smsData.getDate() < oldestMessage)
+            oldestMessage = smsData.getDate();
+
+        smsDataList.put(smsData.getDate(), smsData);
         return true;
     }
 
-    public List<SMSData> getSmsDataList() {
+    public void addSmsData(List<SmsData> smsDataList) {
+        for (SmsData smsData : smsDataList) {
+            addSmsData(smsData);
+        }
+    }
+
+
+    public ArrayList<SmsData> sortedSmsData() {
+        ArrayList<Long> dates = new ArrayList<>(smsDataList.keySet());
+        Collections.sort(dates);
+        ArrayList<SmsData> items = new ArrayList<>();
+        for (Long date : dates) {
+            for (Long key : smsDataList.keySet()) {
+                if (date.equals(key)) {
+                    items.add(smsDataList.get(key));
+                }
+            }
+        }
+        return items;
+    }
+
+    public HashMap<Long, SmsData> getSmsDataList() {
         return smsDataList;
     }
 
 
-    public void setSmsDataList(List<SMSData> smsDataList) {
+    public void setSmsDataList(HashMap<Long, SmsData> smsDataList) {
         this.smsDataList = smsDataList;
     }
 
@@ -85,4 +111,14 @@ public class Conversation {
     public void addRawNumber(String number) {
         if(!rawNumbers.contains(number)) rawNumbers.add(number);
     }
+
+    public long getNewestMessage() {
+        return newestMessage;
+    }
+
+    public long getOldestMessage() {
+        return oldestMessage;
+    }
+
+
 }

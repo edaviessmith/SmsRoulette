@@ -9,15 +9,15 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.ContactsContract;
+import android.util.Log;
 
 import com.edaviessmith.sms_roulette.data.Contact;
 import com.edaviessmith.sms_roulette.data.Conversation;
 import com.edaviessmith.sms_roulette.data.Info;
-import com.edaviessmith.sms_roulette.data.SMSData;
+import com.edaviessmith.sms_roulette.data.SmsData;
 
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,7 +29,6 @@ public class App extends Application {
 
     /**
      * App is a singleton instance used to retain data and state between activities
-     *
      */
 
     private static Context context;
@@ -40,12 +39,12 @@ public class App extends Application {
 
 
     // CONTEXT
-    public void onCreate(){
+    public void onCreate() {
         super.onCreate();
         App.context = getApplicationContext();
 
         conversationList = new LinkedHashMap<>();
-        contactList      = new ArrayList<>();
+        contactList = new ArrayList<>();
 
 
     }
@@ -69,7 +68,6 @@ public class App extends Application {
     public void setConversationList(LinkedHashMap<Integer, Conversation> conversationList) {
         this.conversationList = conversationList;
     }
-
 
 
     public Bitmap getPhotoFromUri(Contact contact) {
@@ -119,8 +117,6 @@ public class App extends Application {
     }
 
 
-
-
     public void readContacts() {
 
         /* Add contacts with numbers */
@@ -128,26 +124,24 @@ public class App extends Application {
         ContentResolver cr = getContentResolver();
         String sortOrder = ContactsContract.Contacts.DISPLAY_NAME + " COLLATE LOCALIZED ASC";
         Cursor cur = cr.query(uri, null, null, null, sortOrder);
-        if(cur.getCount() > 0)
-        {
+        if (cur.getCount() > 0) {
             long id;
             String name;
             String thumbUri;
             String photoUri;
 
-            while(cur.moveToNext())
-            {
+            while (cur.moveToNext()) {
                 Contact contact = new Contact();
-                id       = cur.getLong(cur.getColumnIndex(ContactsContract.Contacts._ID));
-                name     = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
+                id = cur.getLong(cur.getColumnIndex(ContactsContract.Contacts._ID));
+                name = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
                 thumbUri = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI));
                 photoUri = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.PHOTO_URI));
 
                 contact.setId(id);
                 contact.setDisplayName(name);
 
-                if(Var.validateURI(thumbUri)) contact.setThumbUri(Uri.parse(thumbUri));
-                if(Var.validateURI(photoUri)) contact.setPhotoUri(Uri.parse(photoUri));
+                if (Var.validateURI(thumbUri)) contact.setThumbUri(Uri.parse(thumbUri));
+                if (Var.validateURI(photoUri)) contact.setPhotoUri(Uri.parse(photoUri));
 
 
                 if (Integer.parseInt(cur.getString(cur.getColumnIndex
@@ -163,7 +157,7 @@ public class App extends Application {
                     while (pCur.moveToNext()) {
 
                         Info phone = new Info(Var.Category.PHONE);
-                        type   = pCur.getInt(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE));
+                        type = pCur.getInt(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE));
                         number = pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
 
                         phone.setType(type);
@@ -182,139 +176,133 @@ public class App extends Application {
 
     }
 
-
     /**
-     * Iterate cursor through sms messages and populate conversationList
-     * @conversation number filter the sms messages that contain the address
-     *               or the newest for each unique address if null
+     * Iterate cursor through sms content resolver and get a list of SmsData
+     * @param conversation param to filter the sms messages that contain the address
+     *                     or the newest for each unique address if null
+     * @return List<SmsData>
      */
-    public void readConversations(Conversation conversation) {
-        /* Add Sms to contacts */
-
-        /**
-         * TODO: Use SQL to get the most recent message for each number
-         SELECT * FROM  `message`
-         WHERE DATE IN (SELECT MAX( DATE )
-                        FROM  `message`
-                        GROUP BY phone)
-         */
-
+    public List<SmsData> readConversations(Conversation conversation) {
         String selection;
+        List<SmsData> smsDataList = new ArrayList<>();
 
-        if(conversation != null && conversation.getNumber() != null) {
-
+        if (conversation != null && conversation.getNumber() != null) {
+            /* Build a query to include all variants of the conversation's numbers */
             StringBuilder sb = new StringBuilder();
-            for(String s: conversation.getRawNumbers()) {
+            for (String s : conversation.getRawNumbers()) {
                 sb.append(s).append("', '");
             }
 
             selection = "address IN ('" + sb.substring(0, sb.length() - 3) + ")";
-            if(!conversation.getSmsDataList().isEmpty()) {
-                selection += " AND date < " + conversation.getSmsDataList().get(conversation.getSmsDataList().size() - 1);
+            if (!conversation.getSmsDataList().isEmpty()) {
+                selection += " AND date < " + conversation.getSmsDataList().get(conversation.getOldestMessage()).getDate();
             }
         } else {
+            /* Build a query to get the newest conversation for each number (may include older messages with number variants */
             selection = "date IN (SELECT MAX( date ) FROM  sms GROUP BY address)";
         }
 
-        Uri sms_uri = Uri.parse("content://sms/");
+        Log.i("App", "sql: " + selection);
 
-        //TODO: SQL pagination needed to quicken queries and loading
-
-        String sortSmsOrder = "address ASC, date " + (conversation != null? "ASC":"DESC");
-
-
+        //TODO: SQL pagination needed to quicken queries and loading (just needs thorough check now)
         /* Get the most recent message for each address */
-        Cursor c = getContentResolver().query(sms_uri, null, selection, null, null);
+        Cursor c = getContentResolver().query(Uri.parse("content://sms/"), null, selection, null, null);
 
         // Read the sms data and store it in the list
-        if(c.moveToFirst()) {
+        if (c.moveToFirst()) {
 
-            /* If the conversation is null create placeholder data, otherwise use it's info */
-            String previousNumber = conversation != null? conversation.getNumber(): "";
-            if(conversation == null) conversation = new Conversation();
-
-            int index = 1;
-
-            int id;
-            String body, address;
-            Var.MsgType type;
-            Long date;
-
-            for(int i = 0; i < c.getCount() && i <= Var.LIMIT; i++) {
-
-                SMSData sms = new SMSData();
-
-                id      = c.getInt(c.getColumnIndexOrThrow("_id"));
-                body    = c.getString(c.getColumnIndexOrThrow("body"));
-                type    = Var.getMsgType(c.getString(c.getColumnIndexOrThrow("type")));
-                address = c.getString(c.getColumnIndexOrThrow("address"));
-                date    = c.getLong(c.getColumnIndexOrThrow("date")) / 1000;
-
-                sms.setId(id);
-                sms.setBody(body);
-                sms.setType(type);
-                sms.setNumber(address);
-                sms.setDate(new Date(date));
-
-                //TODO: change date to Cal whenever
-                //Calendar.getInstance().setTimeInMillis(milis);
-
-                if(!previousNumber.equals(sms.getNumber())) {
-
-                    boolean hasConversation = false;
-
-                    /* Check if a previous conversation has the same phone */
-                    for (Conversation conv : conversationList.values()) {
-                        if(conv.getNumber().equals(sms.getNumber())) {
-                            conversation = conv;
-
-                            hasConversation = true;
-                            break;
-                        }
-                    }
-
-                    findContact:
-                    if(!hasConversation) {
-
-                        /* Create a new conversation */
-                        conversation = new Conversation();
-                        conversation.setNumber(sms.getNumber());
-
-                        /* Search for a matching contact */
-                        for (Contact contact : contactList) {
-                            if (contact.getInfo() != null) {
-                                for (Info phoneInfo : contact.getInfo()) {
-                                    if (phoneInfo.getValue().equals(sms.getNumber())) {
-                                        /* The contact's number matches, set the contact and break */
-                                        conversation.setContact(contact);
-
-                                        break findContact;
-                                    }
-                                }
-                            }
-                        }
-
-                    }
-
-                    /* Add the conversation to the list if it isn't already there (Redundant Check) */
-                    if(!conversationList.containsValue(conversation)) {
-                        //TODO: index should not be used (too much thought and slow)
-                        conversation.setId(index);  /* Add Map Id for bidirectionallity */
-                        conversationList.put(index++, conversation);
-                    }
-                }
-
-                /* Add Sms to the conversation */
-                conversation.addRawNumber(address);
-                conversation.addSmsData(sms);
-                previousNumber = sms.getNumber();
+            for (int i = 0; i < c.getCount() && i <= Var.LIMIT; i++) {
+                /* Instantiate the smsData object and add it to a list */
+                smsDataList.add(new SmsData(c));
 
                 c.moveToNext();
             }
         }
-
         c.close();
+
+        return smsDataList;
     }
 
+
+    /**
+     * Iterate cursor through sms messages and populate conversationList
+     */
+    public void queryConversations() {
+
+        List<SmsData> smsDataList = readConversations(null);
+
+        String previousNumber = "";
+        Conversation conversation = new Conversation();
+
+        int index = 1; // Index is dumb :(
+
+        for (SmsData sms : smsDataList) {
+            if (!previousNumber.equals(sms.getNumber())) {
+                /* Get the reference or new conversation from the App conversationList */
+                conversation = findConversationRelation(sms, index++);
+            }
+            conversation.addRawNumber(sms.getRawNumber());
+            conversation.addSmsData(sms);
+        }
+
+    }
+
+
+    /**
+     * Create new or reference conversations in the App's singleton conversationList
+     *
+     * @param sms   SmsData (the number is the only important property here)
+     * @param index temporary index for listview selection (gross and dirty)
+     * @return Conversation - A new conversation (if no current) or reference the related
+     * conversation from the right contact
+     */
+    private Conversation findConversationRelation(SmsData sms, int index) {
+
+        Conversation conversation = null;
+        boolean hasConversation = false;
+
+        /* Check if a previous conversation has the same phone */
+        for (Conversation conv : conversationList.values()) {
+            if (conv.getNumber().equals(sms.getNumber())) {
+                conversation = conv;
+
+                hasConversation = true;
+                break;
+            }
+        }
+
+        findContact:
+        if (!hasConversation) {
+
+            /* Create a new conversation */
+            conversation = new Conversation();
+            conversation.setNumber(sms.getNumber());
+
+            /* Search for a matching contact */
+            for (Contact contact : contactList) {
+                if (contact.getInfo() != null) {
+                    for (Info phoneInfo : contact.getInfo()) {
+                        if (phoneInfo.getValue().equals(sms.getNumber())) {
+                            /* The contact's number matches, set the contact and break */
+                            conversation.setContact(contact);
+
+                            break findContact;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        /* Add the conversation to the list if it isn't already there (Redundant Check) */
+        if (!conversationList.containsValue(conversation)) {
+
+            //TODO: index should not be used (too much thought and slow)
+            conversation.setId(index);  /* Add Map Id for bidirectionallity */
+            conversationList.put(index, conversation);
+        }
+
+        return conversation;
+    }
 
 }
