@@ -17,6 +17,7 @@ public class Var {
     public enum Feed {IDLE, PENDING, DONE}
 
     public static int LIMIT = 20;
+    public static int LIST_OFFSET = 20;
 
 
     public static String getTimeSince(long publishedDate) {

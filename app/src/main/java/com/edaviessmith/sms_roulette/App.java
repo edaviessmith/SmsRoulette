@@ -178,11 +178,12 @@ public class App extends Application {
 
     /**
      * Iterate cursor through sms content resolver and get a list of SmsData
-     * @param conversation param to filter the sms messages that contain the address
+     * @param conversation - filter the sms messages that contain the address
      *                     or the newest for each unique address if null
+     * @param limit - cursor limit number of rows returned
      * @return List<SmsData>
      */
-    public List<SmsData> readConversations(Conversation conversation) {
+    public List<SmsData> readConversations(Conversation conversation, int limit) {
         String selection;
         List<SmsData> smsDataList = new ArrayList<>();
 
@@ -209,9 +210,11 @@ public class App extends Application {
         Cursor c = getContentResolver().query(Uri.parse("content://sms/"), null, selection, null, null);
 
         // Read the sms data and store it in the list
+
+
         if (c.moveToFirst()) {
 
-            for (int i = 0; i < c.getCount() && i <= Var.LIMIT; i++) {
+            for (int i = 0; i < c.getCount() && (limit == 0 || i <= limit); i++) {
                 /* Instantiate the smsData object and add it to a list */
                 smsDataList.add(new SmsData(c));
 
@@ -229,7 +232,7 @@ public class App extends Application {
      */
     public void queryConversations() {
 
-        List<SmsData> smsDataList = readConversations(null);
+        List<SmsData> smsDataList = readConversations(null, 0);
 
         String previousNumber = "";
         Conversation conversation = new Conversation();

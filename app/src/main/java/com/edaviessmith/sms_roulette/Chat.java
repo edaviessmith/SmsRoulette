@@ -2,10 +2,10 @@ package com.edaviessmith.sms_roulette;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -49,7 +49,7 @@ public class Chat extends ActionBarActivity {
 
         //TODO async conversation
         chatState = Var.Feed.PENDING;
-        new RetrieveChatTask(Chat.this).execute(conversation);
+        new RetrieveChatTask(Chat.this, Var.LIMIT).execute(conversation);
 
         conversationAdapter = new ConversationAdapter(this);
         conversation_lv = (ListView) findViewById(R.id.conversation_lv);
@@ -65,10 +65,15 @@ public class Chat extends ActionBarActivity {
 
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-                if (chatState == Var.Feed.IDLE && firstVisibleItem + visibleItemCount > totalItemCount / 2) {
+
+                Log.d("Scroll", (firstVisibleItem + visibleItemCount) + " / " + (totalItemCount));
+
+                if (chatState == Var.Feed.IDLE && (firstVisibleItem + visibleItemCount + (totalItemCount / 4)) > totalItemCount) {
                     chatState = Var.Feed.PENDING;
 
-                    new RetrieveChatTask(Chat.this).execute(conversation);
+                    int limit = Math.min(120, totalItemCount);
+
+                    new RetrieveChatTask(Chat.this, limit).execute(conversation);
                 }
             }
 
@@ -112,7 +117,7 @@ public class Chat extends ActionBarActivity {
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             if(convertView == null) {
-                convertView = inflater.inflate(R.layout.item_conversation, parent, false);
+                convertView = inflater.inflate(R.layout.item_chat, parent, false);
                 ViewHolder holder = new ViewHolder(convertView);
                 convertView.setTag(holder);
             }
@@ -124,9 +129,9 @@ public class Chat extends ActionBarActivity {
             holder.date_tv.setText(Var.getTimeSince(smsData.getDate()));
 
             if(smsData.getType() == Var.MsgType.SENT) {
-                holder.name_tv.setTextColor(Color.BLUE);
+                holder.bubble_v.setBackgroundResource(R.drawable.bubble);
             } else {
-                holder.name_tv.setTextColor(Color.BLACK);
+                holder.bubble_v.setBackgroundResource(R.drawable.bubble2);
             }
 
             holder.message_tv.setVisibility(View.GONE);
@@ -140,11 +145,13 @@ public class Chat extends ActionBarActivity {
             TextView name_tv,
                      date_tv,
                      message_tv;
+            View bubble_v;
 
             public ViewHolder(View view) {
                 message_tv = (TextView) view.findViewById(R.id.message_tv);
                 name_tv = (TextView) view.findViewById(R.id.name_tv);
                 date_tv = (TextView) view.findViewById(R.id.date_tv);
+                bubble_v = view.findViewById(R.id.bubble_v);
             }
         }
 
@@ -153,17 +160,18 @@ public class Chat extends ActionBarActivity {
     static class RetrieveChatTask extends AsyncTask<Conversation, Void, Void> {
 
         private final Chat chat;
+        private final int limit;
         private List<SmsData> smsDataList;
 
-        public RetrieveChatTask(Chat chat) {
+        public RetrieveChatTask(Chat chat, int limit) {
             this.chat = chat;
+            this.limit = limit;
         }
 
         @Override
         protected Void doInBackground(Conversation... conversations) {
 
-            smsDataList = chat.app.readConversations(conversations[0]);
-
+            smsDataList = chat.app.readConversations(conversations[0], limit);
             return null;
         }
 
@@ -171,15 +179,9 @@ public class Chat extends ActionBarActivity {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
 
-            //todo (maybe listener to know when to update the adapter)
             chat.chatState = Var.Feed.IDLE;
-
             chat.conversation.addSmsData(smsDataList);
-
-            // Missing sooo much logic (damn my half thinking 2h into this once brilliant refactor)
-            // *note refactor usually means having a substantial amount of code beforehand
             chat.conversationAdapter.smsDataList = chat.conversation.sortedSmsData();
-
             chat.conversationAdapter.notifyDataSetChanged();
         }
     }
