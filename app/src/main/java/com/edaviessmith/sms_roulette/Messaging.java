@@ -33,10 +33,6 @@ public class Messaging extends ActionBarActivity {
 
         app = (App) getApplication();
 
-        app.readContacts();
-        app.queryConversations();
-
-
         //TODO: Sort conversations by the most recent message
 
         messagingAdapter = new MessagingAdapter(this);
@@ -84,7 +80,7 @@ public class Messaging extends ActionBarActivity {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            if(convertView == null) {
+            if (convertView == null) {
                 convertView = inflater.inflate(R.layout.item_conversation, parent, false);
                 ViewHolder holder = new ViewHolder(convertView);
                 convertView.setTag(holder);
@@ -93,8 +89,7 @@ public class Messaging extends ActionBarActivity {
 
             Conversation conversation = getItem(position);
 
-
-            if(conversation.getContact() != null) {
+            if (conversation.getContact() != null) {
                 holder.name_tv.setText(conversation.getContact().getDisplayName());
 
                 Bitmap b = app.getPhotoFromUri(conversation.getContact());
@@ -121,10 +116,10 @@ public class Messaging extends ActionBarActivity {
             ImageView photo_iv;
 
             public ViewHolder(View view) {
-                message_tv = (TextView)  view.findViewById(R.id.message_tv);
-                name_tv    = (TextView)  view.findViewById(R.id.name_tv);
-                date_tv    = (TextView)  view.findViewById(R.id.date_tv);
-                photo_iv   = (ImageView) view.findViewById(R.id.photo_iv);
+                message_tv = (TextView) view.findViewById(R.id.message_tv);
+                name_tv = (TextView) view.findViewById(R.id.name_tv);
+                date_tv = (TextView) view.findViewById(R.id.date_tv);
+                photo_iv = (ImageView) view.findViewById(R.id.photo_iv);
             }
         }
 

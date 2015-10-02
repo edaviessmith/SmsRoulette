@@ -1,6 +1,10 @@
 package com.edaviessmith.sms_roulette.data;
 
+import android.database.Cursor;
 import android.net.Uri;
+import android.provider.ContactsContract;
+
+import com.edaviessmith.sms_roulette.Var;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,9 +20,24 @@ public class Contact {
     private List<Info> info;
     private Uri thumbUri;
     private Uri photoUri;
+    private String email;
 
     public Contact() {
         info = new ArrayList<>();
+    }
+
+    public Contact(Cursor cur) {
+        info = new ArrayList<>();
+
+        setId(cur.getLong(cur.getColumnIndex(ContactsContract.Contacts._ID)));
+        setDisplayName(cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)));
+
+        String tUri = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI));
+        String pUri = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.PHOTO_URI));
+
+        if (Var.validateURI(tUri)) setThumbUri(Uri.parse(tUri));
+        if (Var.validateURI(pUri)) setPhotoUri(Uri.parse(pUri));
+
     }
 
     public List<Info> getInfo() {
@@ -59,5 +78,13 @@ public class Contact {
 
     public long getId() {
         return id;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getEmail() {
+        return email;
     }
 }

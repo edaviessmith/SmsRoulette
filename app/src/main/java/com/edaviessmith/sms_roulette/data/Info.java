@@ -1,5 +1,8 @@
 package com.edaviessmith.sms_roulette.data;
 
+import android.database.Cursor;
+import android.provider.ContactsContract;
+
 import com.edaviessmith.sms_roulette.Var;
 
 /**
@@ -22,6 +25,18 @@ public class Info {
         this.category = category;
         this.type = type;
         this.value = value;
+    }
+
+    public Info(Var.Category cat, Cursor pCur) {
+        setCategory(cat);
+        if (category == Var.Category.PHONE) {
+            setType(pCur.getInt(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE)));
+            setValue(Var.simplePhone(pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER))));
+        }
+        if (category == Var.Category.EMAIL) {
+            setType(pCur.getInt(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Email.TYPE)));
+            setValue(pCur.getString(pCur.getColumnIndex(ContactsContract.CommonDataKinds.Email.ADDRESS)));
+        }
     }
 
     public Var.Category getCategory() {

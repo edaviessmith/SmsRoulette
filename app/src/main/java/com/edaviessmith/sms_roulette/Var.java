@@ -10,7 +10,7 @@ import java.util.Locale;
  */
 public class Var {
 
-    public enum Category {PHONE}
+    public enum Category {EMAIL, PHONE}
 
     public enum MsgType {RECEIVED, SENT, DRAFT, OTHER}
 

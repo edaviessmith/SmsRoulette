@@ -4,7 +4,7 @@
     android:layout_height="match_parent">
 
 
-    <ImageView
+    <com.edaviessmith.sms_roulette.view.RoundedImageView
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:id="@+id/photo_iv" />

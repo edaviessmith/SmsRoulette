@@ -22,13 +22,16 @@
         android:layout_alignParentBottom="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingTop="4dp"
         android:id="@+id/relativeLayout">
 
-        <TextView
-            android:id="@+id/message_tv"
+        <EditText
+            android:id="@+id/message_et"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="5dp"
+            android:hint="Type Message"
+            android:padding="10dp"
+            android:layout_marginBottom="4dp"
             android:layout_toLeftOf="@+id/send_iv"
             android:layout_toStartOf="@+id/send_iv" />
 
@@ -37,7 +40,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@android:drawable/ic_menu_send"
-            android:id="@+id/send_iv" />
+            android:id="@+id/send_iv"
+            android:layout_alignTop="@+id/message_tv" />
 
     </RelativeLayout>
 </RelativeLayout>

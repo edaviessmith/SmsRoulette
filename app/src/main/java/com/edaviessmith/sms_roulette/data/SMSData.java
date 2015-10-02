@@ -19,17 +19,11 @@ public class SmsData {
     }
 
     public SmsData(Cursor c) {
-        id = c.getInt(c.getColumnIndexOrThrow("_id"));
-        body = c.getString(c.getColumnIndexOrThrow("body"));
-        type = Var.getMsgType(c.getString(c.getColumnIndexOrThrow("type")));
-        date = c.getLong(c.getColumnIndexOrThrow("date"));
-        number = c.getString(c.getColumnIndexOrThrow("address"));
-
-        setId(id);
-        setBody(body);
-        setType(type);
-        setDate(date);
-        setNumber(number);
+        setId(c.getInt(c.getColumnIndexOrThrow("_id")));
+        setBody(c.getString(c.getColumnIndexOrThrow("body")));
+        setType(Var.getMsgType(c.getString(c.getColumnIndexOrThrow("type"))));
+        setDate(c.getLong(c.getColumnIndexOrThrow("date")));
+        setNumber(c.getString(c.getColumnIndexOrThrow("address")));
     }
 
     public int getId() {

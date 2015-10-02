@@ -2,6 +2,7 @@ package com.edaviessmith.sms_roulette;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
@@ -12,6 +13,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -71,9 +73,10 @@ public class Chat extends ActionBarActivity {
 
                     int limit = Math.min(120, totalItemCount);
                     new RetrieveChatTask(Chat.this, limit).execute(conversation);
+                    //conversation_lv.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
                 }
 
-                //view.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
+
             }
 
         });
@@ -136,13 +139,36 @@ public class Chat extends ActionBarActivity {
             holder.name_tv.setText(smsData.getBody());
             holder.date_tv.setText(Var.getTimeSince(smsData.getDate()));
 
+
             if(smsData.getType() == Var.MsgType.SENT) {
                 holder.bubble_v.setBackgroundResource(R.drawable.bubble);
 
+                if (position == getCount() - 1 || getItem(position + 1).getType() == Var.MsgType.RECEIVED) {
+                    if (conversation.getContact() != null) {
+                        holder.photo_iv.setImageBitmap(app.ownerPhoto);
+                    } else {
+                        holder.photo_iv.setImageResource(R.drawable.ic_launcher);
+                    }
+                    holder.photo_iv.setVisibility(View.VISIBLE);
+                } else {
+                    holder.photo_iv.setVisibility(View.GONE);
+                }
+
             } else {
                 holder.bubble_v.setBackgroundResource(R.drawable.bubble2);
-            }
 
+                if (position == getCount() - 1 || getItem(position + 1).getType() == Var.MsgType.SENT) {
+                    if (conversation.getContact() != null) {
+                        Bitmap b = app.getPhotoFromUri(conversation.getContact());
+                        holder.photo_iv.setImageBitmap(b);
+                    } else {
+                        holder.photo_iv.setImageResource(R.drawable.ic_launcher);
+                    }
+                    holder.photo_iv.setVisibility(View.VISIBLE);
+                } else {
+                    holder.photo_iv.setVisibility(View.GONE);
+                }
+            }
 
             return convertView;
 
@@ -150,15 +176,17 @@ public class Chat extends ActionBarActivity {
 
         class ViewHolder {
             TextView name_tv,
-                     date_tv,
-                     message_tv;
+                    date_tv,
+                    message_tv;
             View bubble_v;
+            ImageView photo_iv;
 
             public ViewHolder(View view) {
                 message_tv = (TextView) view.findViewById(R.id.message_tv);
                 name_tv = (TextView) view.findViewById(R.id.name_tv);
                 date_tv = (TextView) view.findViewById(R.id.date_tv);
                 bubble_v = view.findViewById(R.id.bubble_v);
+                photo_iv = (ImageView) view.findViewById(R.id.photo_iv);
             }
         }
 
@@ -182,11 +210,7 @@ public class Chat extends ActionBarActivity {
 
             /* Add data to the conversation list and get a list of smsData that has not been added yet */
             smsDataList = chat.conversation.checkSmsData(nextSmsList);
-            try {
-                Thread.sleep(500);
-            } catch (Exception e) {
 
-            }
             return null;
         }
 
@@ -194,10 +218,18 @@ public class Chat extends ActionBarActivity {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
 
-            chat.chatState = smsDataList.isEmpty() ? Var.Feed.DONE : Var.Feed.IDLE;
+            // Assumes list is older (might be an okay assumption)
+            int index = chat.conversation_lv.getFirstVisiblePosition() + smsDataList.size();
+            View v = chat.conversation_lv.getChildAt(chat.conversation_lv.getHeaderViewsCount());
+            int top = (v == null) ? 0 : v.getTop();
 
+            chat.chatState = smsDataList.isEmpty() ? Var.Feed.DONE : Var.Feed.IDLE;
             chat.conversationAdapter.smsDataList.addAll(smsDataList);
+
             chat.conversationAdapter.notifyDataSetChanged();
+
+            // Use the previous position plus newer items to fake the offset not moving the ListView
+            chat.conversation_lv.setSelectionFromTop(index, top);
         }
     }
 
