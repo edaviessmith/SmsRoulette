@@ -89,7 +89,7 @@ public class App extends Application {
             return BitmapFactory.decodeStream(input);
         }
 
-        return BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_menu_report_image);
+        return BitmapFactory.decodeResource(getResources(), R.drawable.ic_person_grey600_36dp);
     }
 
 
@@ -139,7 +139,7 @@ public class App extends Application {
 
                     /* Check if this email belongs to the main google account */
                     if (ownerContact == null && emailList.contains(email.getValue())) {
-                        //TODO We're finding the owner, but the photo is not working
+                        //TODO We're finding the owner, but the photo is not working (not there?)
                         ownerContact = contact;
 
                     }
@@ -182,8 +182,8 @@ public class App extends Application {
         }
 
         //Log.i("App", "sql: " + selection);
-
         //TODO: SQL pagination needed to quicken queries and loading (just needs thorough check now)
+
         /* Get the most recent message for each address */
         Cursor c = getContentResolver().query(Uri.parse("content://sms/"), null, selection, null, null);
 

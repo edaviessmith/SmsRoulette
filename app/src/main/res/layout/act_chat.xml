@@ -6,24 +6,25 @@
 
 
     <ListView
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/conversation_lv"
         android:divider="@android:color/transparent"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_above="@+id/relativeLayout" />
-
-    <!--    android:stackFromBottom="true"
-        android:transcriptMode="alwaysScroll"-->
+        android:layout_above="@+id/revolver_v" />
+    
+    <com.edaviessmith.sms_roulette.view.RevolverView
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:id="@+id/revolver_v"
+        android:layout_above="@+id/message_v" />
 
     <RelativeLayout
         android:layout_alignParentBottom="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="4dp"
-        android:id="@+id/relativeLayout">
+        android:id="@+id/message_v">
 
         <EditText
             android:id="@+id/message_et"

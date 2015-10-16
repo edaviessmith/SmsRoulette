@@ -1,8 +1,13 @@
 package com.edaviessmith.sms_roulette;
 
+import com.edaviessmith.sms_roulette.data.SmsData;
+
 import java.net.URI;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
 
 /**
@@ -41,7 +46,7 @@ public class Var {
                 }
 
             }
-            date += s.format(publishedDate * 1000);
+            date += s.format(publishedDate);
         }
 
         return date;
@@ -79,6 +84,21 @@ public class Var {
             return false;
         }
         return true;
+    }
+
+
+    public static ArrayList<SmsData> sortedSmsData(HashMap<Long, SmsData> smsDataList) {
+        ArrayList<Long> dates = new ArrayList<>(smsDataList.keySet());
+        Collections.sort(dates);
+        ArrayList<SmsData> items = new ArrayList<>();
+        for (Long date : dates) {
+            for (Long key : smsDataList.keySet()) {
+                if (date.equals(key)) {
+                    items.add(smsDataList.get(key));
+                }
+            }
+        }
+        return items;
     }
 
 }

@@ -39,7 +39,7 @@ public class Chat extends ActionBarActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.act_conversation);
+        setContentView(R.layout.act_chat);
 
         app = (App) getApplication();
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -48,7 +48,6 @@ public class Chat extends ActionBarActivity {
         int conversationKey = intent.getIntExtra("conversation", 0);
         conversation = app.getConversationList().get(conversationKey);
 
-        //TODO async conversation
         chatState = Var.Feed.PENDING;
         new RetrieveChatTask(Chat.this, Var.LIMIT).execute(conversation);
 
@@ -90,7 +89,7 @@ public class Chat extends ActionBarActivity {
 
         public ConversationAdapter(Context context) {
             inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            smsDataList = conversation.sortedSmsData();
+            smsDataList = Var.sortedSmsData(conversation.getSmsDataList());
         }
 
         @Override
@@ -143,17 +142,6 @@ public class Chat extends ActionBarActivity {
             if(smsData.getType() == Var.MsgType.SENT) {
                 holder.bubble_v.setBackgroundResource(R.drawable.bubble);
 
-                if (position == getCount() - 1 || getItem(position + 1).getType() == Var.MsgType.RECEIVED) {
-                    if (conversation.getContact() != null) {
-                        holder.photo_iv.setImageBitmap(app.ownerPhoto);
-                    } else {
-                        holder.photo_iv.setImageResource(R.drawable.ic_launcher);
-                    }
-                    holder.photo_iv.setVisibility(View.VISIBLE);
-                } else {
-                    holder.photo_iv.setVisibility(View.GONE);
-                }
-
             } else {
                 holder.bubble_v.setBackgroundResource(R.drawable.bubble2);
 
@@ -162,7 +150,7 @@ public class Chat extends ActionBarActivity {
                         Bitmap b = app.getPhotoFromUri(conversation.getContact());
                         holder.photo_iv.setImageBitmap(b);
                     } else {
-                        holder.photo_iv.setImageResource(R.drawable.ic_launcher);
+                        holder.photo_iv.setImageResource(R.drawable.ic_person_grey600_36dp);
                     }
                     holder.photo_iv.setVisibility(View.VISIBLE);
                 } else {
@@ -171,22 +159,21 @@ public class Chat extends ActionBarActivity {
             }
 
             return convertView;
-
         }
 
         class ViewHolder {
-            TextView name_tv,
-                    date_tv,
-                    message_tv;
-            View bubble_v;
+            TextView  name_tv,
+                      date_tv,
+                      message_tv;
+            View      bubble_v;
             ImageView photo_iv;
 
             public ViewHolder(View view) {
-                message_tv = (TextView) view.findViewById(R.id.message_tv);
-                name_tv = (TextView) view.findViewById(R.id.name_tv);
-                date_tv = (TextView) view.findViewById(R.id.date_tv);
-                bubble_v = view.findViewById(R.id.bubble_v);
-                photo_iv = (ImageView) view.findViewById(R.id.photo_iv);
+                message_tv = (TextView)  view.findViewById(R.id.message_tv);
+                name_tv    = (TextView)  view.findViewById(R.id.name_tv);
+                date_tv    = (TextView)  view.findViewById(R.id.date_tv);
+                bubble_v   =             view.findViewById(R.id.bubble_v);
+                photo_iv   = (ImageView) view.findViewById(R.id.photo_iv);
             }
         }
 
@@ -207,9 +194,10 @@ public class Chat extends ActionBarActivity {
         protected Void doInBackground(Conversation... conversations) {
 
             List<SmsData> nextSmsList = chat.app.readConversations(conversations[0], limit);
-
             /* Add data to the conversation list and get a list of smsData that has not been added yet */
             smsDataList = chat.conversation.checkSmsData(nextSmsList);
+
+            //Log.d("Conversation", "chat: " + conversations[0].getSmsDataList().size() + " - " + smsDataList.get(0).getBody());
 
             return null;
         }
@@ -218,13 +206,15 @@ public class Chat extends ActionBarActivity {
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
 
-            // Assumes list is older (might be an okay assumption)
+            // Assumes list is older (not an okay assumption)
             int index = chat.conversation_lv.getFirstVisiblePosition() + smsDataList.size();
             View v = chat.conversation_lv.getChildAt(chat.conversation_lv.getHeaderViewsCount());
             int top = (v == null) ? 0 : v.getTop();
 
             chat.chatState = smsDataList.isEmpty() ? Var.Feed.DONE : Var.Feed.IDLE;
+
             chat.conversationAdapter.smsDataList.addAll(smsDataList);
+
 
             chat.conversationAdapter.notifyDataSetChanged();
 

@@ -97,7 +97,7 @@ public class Messaging extends ActionBarActivity {
             } else {
                 holder.name_tv.setText(conversation.getNumber());
 
-                holder.photo_iv.setImageResource(R.drawable.ic_launcher);
+                holder.photo_iv.setImageResource(R.drawable.ic_person_grey600_36dp);
             }
 
             if (!conversation.getSmsDataList().isEmpty()) {
@@ -110,16 +110,16 @@ public class Messaging extends ActionBarActivity {
         }
 
         class ViewHolder {
-            TextView name_tv,
-                    date_tv,
-                    message_tv;
+            TextView  name_tv,
+                      date_tv,
+                      message_tv;
             ImageView photo_iv;
 
             public ViewHolder(View view) {
-                message_tv = (TextView) view.findViewById(R.id.message_tv);
-                name_tv = (TextView) view.findViewById(R.id.name_tv);
-                date_tv = (TextView) view.findViewById(R.id.date_tv);
-                photo_iv = (ImageView) view.findViewById(R.id.photo_iv);
+                message_tv = (TextView)  view.findViewById(R.id.message_tv);
+                name_tv    = (TextView)  view.findViewById(R.id.name_tv);
+                date_tv    = (TextView)  view.findViewById(R.id.date_tv);
+                photo_iv   = (ImageView) view.findViewById(R.id.photo_iv);
             }
         }
 

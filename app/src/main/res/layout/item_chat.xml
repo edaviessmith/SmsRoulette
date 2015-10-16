@@ -4,12 +4,6 @@
     android:layout_height="wrap_content"
     android:paddingTop="4dp">
 
-    <com.edaviessmith.sms_roulette.view.RoundedImageView
-        style="@style/chat_photo"
-        android:id="@+id/photo_iv"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
-
     <RelativeLayout
         android:id="@+id/bubble_v"
         android:layout_width="wrap_content"
@@ -20,14 +14,15 @@
         android:layout_alignParentEnd="true"
         android:layout_marginLeft="15dp"
         android:layout_marginStart="15dp"
-        android:layout_marginRight="60dp"
-        android:layout_marginEnd="60dp">
+        android:layout_marginRight="15dp"
+        android:layout_marginEnd="15dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="New Text"
             android:id="@+id/name_tv"
+            android:padding="2dp"
             android:textColor="@android:color/white"
             android:layout_alignParentTop="true" />
 
@@ -35,11 +30,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/date_tv"
-            android:visibility="gone"
-            android:layout_gravity="right"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true" />
+            android:text="date"
+            android:textColor="@android:color/white"
+            android:gravity="center"
+            android:layout_below="@+id/name_tv"
+
+            android:layout_marginRight="17dp"
+            android:layout_marginEnd="17dp" />
 
 
     </RelativeLayout>

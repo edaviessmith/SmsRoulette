@@ -5,7 +5,6 @@ import android.util.Log;
 import com.edaviessmith.sms_roulette.Var;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -83,20 +82,6 @@ public class Conversation {
         }
 
         return checkSmsDataList;
-    }
-
-    public ArrayList<SmsData> sortedSmsData() {
-        ArrayList<Long> dates = new ArrayList<>(smsDataList.keySet());
-        Collections.sort(dates);
-        ArrayList<SmsData> items = new ArrayList<>();
-        for (Long date : dates) {
-            for (Long key : smsDataList.keySet()) {
-                if (date.equals(key)) {
-                    items.add(smsDataList.get(key));
-                }
-            }
-        }
-        return items;
     }
 
     public HashMap<Long, SmsData> getSmsDataList() {
