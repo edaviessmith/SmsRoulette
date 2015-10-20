@@ -5,12 +5,17 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import com.edaviessmith.sms_roulette.Listener;
 import com.edaviessmith.sms_roulette.R;
 import com.edaviessmith.sms_roulette.Revolver;
 
@@ -23,11 +28,14 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
     Revolver rev;
 
     Bitmap bm_revolver, bm_trigger;
+    Bitmap bitmap;
+    Canvas temp;
 
     private boolean isTouching;
     public int touchDownPosX;
 
     public final int touchDownDragLeft = 100;
+    private Listener onFireListener;
 
 
     //Measure frames per second.
@@ -62,10 +70,20 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
 
     private void init() {
         //fpsPaint.setTextSize(30);
+        transparentPaint = new Paint();
+        transparentPaint.setColor(getResources().getColor(android.R.color.transparent));
+        transparentPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+        transparentPaint.setAntiAlias(true);
+
+        this.setBackgroundColor(Color.TRANSPARENT);
+        this.setZOrderOnTop(true); //necessary
+        getHolder().setFormat(PixelFormat.TRANSPARENT);
 
         //Set thread
         getHolder().addCallback(this);
         setFocusable(true);
+
+
     }
 
     @Override
@@ -83,6 +101,9 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
         bm_revolver = BitmapFactory.decodeResource(getResources(), R.drawable.revolver); //Load a bm_revolver image.
         bm_trigger = BitmapFactory.decodeResource(getResources(), R.drawable.trigger); //Load a background.
 
+        bitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+        bitmap.eraseColor(Color.TRANSPARENT);
+        temp = new Canvas(bitmap);
     }
 
 
@@ -117,13 +138,18 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
         return true;
     }
 
+
+    Paint transparentPaint;
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
+        //temp.drawColor(Color.argb(80, 0, 0, 0));
+
+        temp.drawRect(rev.screen.x, rev.screen.y, 0, 0, transparentPaint);
 
         if(canvas != null) {
-            canvas.drawColor(Color.WHITE);
+            //canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
 
             if(!isTouching) {
@@ -134,18 +160,18 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
 
 
             // TRIGGER
-            canvas.save(); //Save the position of the canvas matrix.
-            rev.transformTrigger(canvas);
+            temp.save(); //Save the position of the canvas matrix.
+            rev.transformTrigger(temp);
 
-            canvas.drawBitmap(bm_trigger, 0, 0, null);
-            canvas.restore(); //Rotate the canvas matrix back to its saved position
+            temp.drawBitmap(bm_trigger, 0, 0, null);
+            temp.restore(); //Rotate the canvas matrix back to its saved position
 
             // REVOLVER
-            canvas.save(); //Save the position of the canvas matrix.
-            rev.transformRevolver(canvas);
+            temp.save(); //Save the position of the canvas matrix.
+            rev.transformRevolver(temp);
 
-            canvas.drawBitmap(bm_revolver, 0, 0, null);
-            canvas.restore(); //Rotate the canvas matrix back to its saved position
+            temp.drawBitmap(bm_revolver, 0, 0, null);
+            temp.restore(); //Rotate the canvas matrix back to its saved position
 
 
             //Measure frame rate (unit: frames per second).
@@ -157,7 +183,11 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
                 framesCountAvg = framesCount;
                 framesCount = 0;
             }*/
+
+            canvas.drawBitmap(bitmap, 0, 0, null);
         }
+
+        if (onFireListener != null) onFireListener.onProgress(rev.animStep);
     }
 
 
@@ -191,6 +221,10 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         rev.screen.set(width, height);
+    }
+
+    public void setOnFireListener(Listener onFireListener) {
+        this.onFireListener = onFireListener;
     }
 
 
@@ -230,6 +264,18 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
                             surfaceHolder.unlockCanvasAndPost(canvas);
                         }
                     }
+
+
+
+                    if(rev.animStep == 1f) {
+                        if(!rev.hasFired) {
+                            rev.hasFired = true;
+                            if (onFireListener != null) onFireListener.onComplete();
+                        }
+                    } else {
+                        rev.hasFired = false;
+                    }
+
                 }
             }
 

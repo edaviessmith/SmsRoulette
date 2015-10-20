@@ -11,15 +11,21 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.TranslateAnimation;
 import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.edaviessmith.sms_roulette.data.Conversation;
 import com.edaviessmith.sms_roulette.data.SmsData;
+import com.edaviessmith.sms_roulette.view.RevolverView;
 
+import java.util.Date;
 import java.util.List;
 
 
@@ -31,9 +37,15 @@ public class Chat extends ActionBarActivity {
 
     ConversationAdapter conversationAdapter;
     ListView conversation_lv;
+    RevolverView revolverView;
 
+    ImageView bullet_iv;
 
     Var.Feed chatState = Var.Feed.IDLE;
+
+    boolean isSendingMsg;
+
+    Animation transAnim;
 
 
     @Override
@@ -43,6 +55,78 @@ public class Chat extends ActionBarActivity {
 
         app = (App) getApplication();
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        bullet_iv = (ImageView) findViewById(R.id.bullet_iv);
+
+        bullet_iv.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
+                                       int oldTop, int oldRight, int oldBottom) {
+                transAnim = new TranslateAnimation(0f, 0f, v.getHeight(), 0f);
+                transAnim.setDuration(150);
+                transAnim.setInterpolator(new DecelerateInterpolator());
+            }
+        });
+
+
+        revolverView = (RevolverView) findViewById(R.id.revolver_v);
+        revolverView.setOnFireListener(new Listener() {
+
+            @Override
+            public void onProgress(final float percent) {
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if(isSendingMsg) {
+                            if(percent < 0.2f) isSendingMsg = false;
+                        } else {
+
+                            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) conversation_lv.getLayoutParams();
+                            int mar = (int) ((1f - percent) * -60);
+                            //params.bottomMargin = mar;
+
+
+                            bullet_iv.setVisibility(View.GONE);
+
+                            if(transAnim != null) transAnim.cancel();
+
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onComplete() {
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        String msgText = "This is a test so when I am deving I don't have to continually type a message. It's long to get the full effect of the animation";
+                        //TODO in order
+                        // create the message, add it to the lv, scroll it down
+
+                        conversation_lv.setSelection(conversationAdapter.getCount() - 1);
+
+                        SmsData newMessage = new SmsData();
+                        newMessage.setBody(msgText);
+                        newMessage.setDate(new Date().getTime());
+                        newMessage.setType(Var.MsgType.SENDING);
+
+                        conversationAdapter.sendSmsMessage(newMessage);
+
+                        // show the bullet view
+
+                        bullet_iv.setVisibility(View.VISIBLE);
+                        bullet_iv.startAnimation(transAnim);
+
+                        // start animation for msg and bullet
+
+                        isSendingMsg = true;
+                    }
+                });
+            }
+        });
 
         Intent intent = getIntent();
         int conversationKey = intent.getIntExtra("conversation", 0);
@@ -92,6 +176,12 @@ public class Chat extends ActionBarActivity {
             smsDataList = Var.sortedSmsData(conversation.getSmsDataList());
         }
 
+        public void sendSmsMessage(SmsData smsMessage) {
+            smsDataList.add(0, smsMessage);
+
+
+        }
+
         @Override
         public int getCount() {
             return smsDataList.size();
@@ -99,7 +189,7 @@ public class Chat extends ActionBarActivity {
 
         @Override
         public SmsData getItem(int position) {
-            //return smsDataList.get(position);
+            // Read the list backwards (bottom is the newest)
             return smsDataList.get((getCount() - 1) - position);
         }
 

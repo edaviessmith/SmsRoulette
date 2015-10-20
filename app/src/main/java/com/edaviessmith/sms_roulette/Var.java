@@ -17,7 +17,7 @@ public class Var {
 
     public enum Category {EMAIL, PHONE}
 
-    public enum MsgType {RECEIVED, SENT, DRAFT, OTHER}
+    public enum MsgType {RECEIVED, SENT, DRAFT, SENDING, OTHER}
 
     public enum Feed {IDLE, PENDING, DONE}
 

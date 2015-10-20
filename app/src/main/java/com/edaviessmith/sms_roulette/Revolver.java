@@ -23,26 +23,27 @@ public class Revolver {
     public Point screen; //Device's screen size
 
     PointF revSize = new PointF(1.527f, 1.143f); //Revolver size relative to screen
+    PointF trigSize = new PointF(0.2361f, 0.3133f);
 
     /* Current revolver bitmap transforms */
     public Point revPos;
     int revAngle;
     float revScale;
 
-    /* Current position trigger bitmap transforms */
-    PointF trigScale = new PointF(0.2361f, 0.3133f);
+    /* Current trigger position bitmap transforms */
     public PointF trigOffset = new PointF(0.76f, 0.33f);
     int trigAngle = 0, trigAngleFire = -50;
 
     //TODO: initial pos changes depending on screen width height
     /* Idle position revolver bitmap transforms */
-    public PointF revPosIdle = new PointF(-0.4375f, 0.1944f);
+    public PointF revPosIdle = new PointF(-0.4f, 0.2f);
 
     /* Fire position revolver bitmap transforms */
-    PointF revPosFire = new PointF(-0.09f, 0.06f);
-    int revAngleFire = 60;
-    float revScaleFire = 0.7f;
+    PointF revPosFire = new PointF(-0.07f, 0.04f);
+    int revAngleFire =  90;
+    float revScaleFire = 0.5f;
 
+    public boolean hasFired = false;
 
     public float animStep = 0.0f;
 
@@ -94,7 +95,7 @@ public class Revolver {
         //Draw the revolver by applying the canvas rotated matrix.
         canvas.translate(scaleX(trigOffset.x), scaleY(trigOffset.y));
         //Rotate the canvas matrix.
-        canvas.rotate(trigAngle, (scaleX(trigScale.x) / 2),  (scaleY(trigScale.y) / 2));
+        canvas.rotate(trigAngle, (scaleX(trigSize.x) / 2),  (scaleY(trigSize.y) / 2));
     }
 
     /**

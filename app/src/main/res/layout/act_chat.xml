@@ -2,6 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/white"
     tools:context="com.edaviessmith.sms_roulette.Chat">
 
 
@@ -10,8 +11,20 @@
         android:layout_height="wrap_content"
         android:id="@+id/conversation_lv"
         android:divider="@android:color/transparent"
+        android:layout_above="@+id/revolver_v"
         android:layout_alignParentTop="true"
-        android:layout_above="@+id/revolver_v" />
+        android:layout_marginBottom="-60dp" />
+
+    <ImageView
+        android:layout_width="20dp"
+        android:layout_height="100dp"
+        android:id="@+id/bullet_iv"
+        android:src="@drawable/message"
+        android:layout_above="@+id/revolver_v"
+        android:layout_marginRight="52dp"
+        android:layout_marginBottom="-72dp"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
     
     <com.edaviessmith.sms_roulette.view.RevolverView
         android:layout_width="match_parent"
