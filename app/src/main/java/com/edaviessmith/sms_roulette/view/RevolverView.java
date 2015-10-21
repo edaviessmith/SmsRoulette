@@ -11,6 +11,7 @@ import android.graphics.Point;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -107,18 +108,38 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
     }
 
 
+    // Pass the touch event on to another view (allows overlapping)
+    private boolean isTouchDisable = false;
+
+
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        // although the ScrollView doesn't get touch events , its children will get them so intercept them.
+        if (isTouchDisable) {
+            return false;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
     @Override
     public synchronized boolean onTouchEvent(MotionEvent ev) {
+
 
         if(ev.getX() > (rev.screen.x - touchDownDragLeft)) {
             rev.animStep = 1f;
         } else {
 
+            Log.d("touch", "down " + ev.getY());
             switch (ev.getAction()) {
-
                 case MotionEvent.ACTION_DOWN: {
                     touchDownPosX = (int) ev.getX();
                     isTouching = true;
+
+                    if(ev.getY() < 100) {
+                        isTouchDisable = true;
+                    } else {
+                        isTouchDisable = false;
+                    }
+
                     break;
                 }
 
@@ -126,6 +147,13 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
                     if (ev.getX() > touchDownPosX)
                         rev.animStep = (ev.getX() - touchDownPosX) /
                                      (rev.screen.x - touchDownPosX - touchDownDragLeft);
+
+                    if(ev.getY() < 100) {
+                        isTouchDisable = true;
+                    } else {
+                        isTouchDisable = false;
+                    }
+
                     break;
                 }
 
@@ -134,6 +162,12 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
                     break;
             }
         }
+
+        // no more touch events for this view
+        if (isTouchDisable) {
+            return false;
+        }
+
 
         return true;
     }

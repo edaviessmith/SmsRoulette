@@ -6,18 +6,16 @@ import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
-import android.widget.AbsListView;
-import android.widget.BaseAdapter;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -35,8 +33,11 @@ public class Chat extends ActionBarActivity {
 
     Conversation conversation;
 
-    ConversationAdapter conversationAdapter;
-    ListView conversation_lv;
+    public ConversationAdapter conversationAdapter;
+    public RecyclerView conversation_lv;
+    public LinearLayoutManager linearLayoutManager;
+
+
     RevolverView revolverView;
 
     ImageView bullet_iv;
@@ -106,7 +107,7 @@ public class Chat extends ActionBarActivity {
                         //TODO in order
                         // create the message, add it to the lv, scroll it down
 
-                        conversation_lv.setSelection(conversationAdapter.getCount() - 1);
+                        //conversation_lv.setSelection(conversationAdapter.getCount() - 1);
 
                         SmsData newMessage = new SmsData();
                         newMessage.setBody(msgText);
@@ -135,11 +136,20 @@ public class Chat extends ActionBarActivity {
         chatState = Var.Feed.PENDING;
         new RetrieveChatTask(Chat.this, Var.LIMIT).execute(conversation);
 
+
+
+        conversation_lv = (RecyclerView) findViewById(R.id.conversation_lv);
+
+        linearLayoutManager = new LinearLayoutManager(this);
+        //linearLayoutManager.setReverseLayout(true);
+        conversation_lv.setLayoutManager(linearLayoutManager);
+        conversation_lv.setItemAnimator(new DefaultItemAnimator());
+
+
         conversationAdapter = new ConversationAdapter(this);
-        conversation_lv = (ListView) findViewById(R.id.conversation_lv);
         conversation_lv.setAdapter(conversationAdapter);
 
-        conversation_lv.setOnScrollListener(new AbsListView.OnScrollListener() {
+        /*conversation_lv.setOnScrollListener(new AbsListView.OnScrollListener() {
 
 
             @Override
@@ -150,7 +160,7 @@ public class Chat extends ActionBarActivity {
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
 
-                /* Count is to 0 because the ListView stacks from the bottom */
+                *//* Count is to 0 because the ListView stacks from the bottom *//*
                 if (chatState == Var.Feed.IDLE && (firstVisibleItem - (totalItemCount / 4)) < 0) {
                     chatState = Var.Feed.PENDING;
 
@@ -158,107 +168,165 @@ public class Chat extends ActionBarActivity {
                     new RetrieveChatTask(Chat.this, limit).execute(conversation);
                     //conversation_lv.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
                 }
-
-
             }
+        });*/
 
-        });
     }
 
 
-    public class ConversationAdapter extends BaseAdapter {
+    public class ConversationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements View.OnClickListener {
 
         private LayoutInflater inflater;
         public List<SmsData> smsDataList;
+        private Context context;
 
         public ConversationAdapter(Context context) {
+            this.context = context;
             inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             smsDataList = Var.sortedSmsData(conversation.getSmsDataList());
         }
 
         public void sendSmsMessage(SmsData smsMessage) {
             smsDataList.add(0, smsMessage);
-
+            conversation_lv.scrollToPosition(smsDataList.size() - 1);
 
         }
 
-        @Override
-        public int getCount() {
-            return smsDataList.size();
-        }
+
+
+        private static final int TYPE_RECEIVED = 0;
+        private static final int TYPE_SENT = 1;
+        private static final int TYPE_SHOT = 2;
+
 
         @Override
-        public SmsData getItem(int position) {
-            // Read the list backwards (bottom is the newest)
-            return smsDataList.get((getCount() - 1) - position);
-        }
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int i) {
+            View v = null;
+            /*if (i == TYPE_RECEIVED) v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_chat_receive, viewGroup, false);
+            else if (i == TYPE_SENT) v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_chat, viewGroup, false);
+            else if (i == TYPE_SHOT) v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_chat, viewGroup, false);*/
 
-        @Override
-        public int getViewTypeCount() {
-            return 2;   // Sent and Receive
+            if (i == TYPE_RECEIVED)
+                v = inflater.inflate(R.layout.item_chat_receive, viewGroup, false);
+            else
+                v = inflater.inflate(R.layout.item_chat, viewGroup, false);
+            // LayoutInflater.from(viewGroup.getContext())
+
+            if(v != null) v.setOnClickListener(this);
+            return new ViewHolder(v);
         }
 
         @Override
         public int getItemViewType(int position) {
-            return getItem(position).getType() == Var.MsgType.SENT ? 0 : 1;
+
+            //if(getItem(position).getType() == Var.MsgType.SENDING) return TYPE_SENT;
+            if(getItem(position).getType() == Var.MsgType.RECEIVED) return TYPE_RECEIVED;
+
+            return TYPE_SENT;
         }
 
         @Override
-        public long getItemId(int position) {
-            return position;
+        public void onClick(final View view) {
+            int itemPosition = conversation_lv.getChildPosition(view);
+            /*if(itemPosition < getItemCount() - 1)  act.startVideo(getFeed().getItems().get(itemPosition));
+            else if(feedState == Var.FEED_WARNING || feedState == Var.FEED_OFFLINE || feedState == Var.FEED_END) {
+                setFeedState(Var.FEED_LOADING);
+                new YoutubeFeedAsyncTask(act, getFeed(), userId, actionDispatch).execute(getFeed().getNextPageToken());
+
+            }*/
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-
-            if(convertView == null) {
-
-                if (getItemViewType(position) == 0)
-                    convertView = inflater.inflate(R.layout.item_chat, parent, false);
-                else
-                    convertView = inflater.inflate(R.layout.item_chat_receive, parent, false);
-
-                ViewHolder holder = new ViewHolder(convertView);
-                convertView.setTag(holder);
-            }
-            final ViewHolder holder = (ViewHolder) convertView.getTag();
-
-            SmsData smsData = getItem(position);
-
-            holder.name_tv.setText(smsData.getBody());
-            holder.date_tv.setText(Var.getTimeSince(smsData.getDate()));
+        public void onBindViewHolder(RecyclerView.ViewHolder viewHolder, int position) {
+            if (viewHolder instanceof ViewHolder) {
 
 
-            if(smsData.getType() == Var.MsgType.SENT) {
-                holder.bubble_v.setBackgroundResource(R.drawable.bubble);
+                final ViewHolder holder = (ViewHolder) viewHolder;
 
-            } else {
-                holder.bubble_v.setBackgroundResource(R.drawable.bubble2);
+                SmsData smsData = getItem(position);
 
-                if (position == getCount() - 1 || getItem(position + 1).getType() == Var.MsgType.SENT) {
-                    if (conversation.getContact() != null) {
-                        Bitmap b = app.getPhotoFromUri(conversation.getContact());
-                        holder.photo_iv.setImageBitmap(b);
-                    } else {
-                        holder.photo_iv.setImageResource(R.drawable.ic_person_grey600_36dp);
+                holder.name_tv.setText(smsData.getBody());
+                holder.date_tv.setText(Var.getTimeSince(smsData.getDate()));
+
+
+                if(smsData.getType() != Var.MsgType.RECEIVED) {
+                    holder.bubble_v.setBackgroundResource(R.drawable.bubble);
+
+                    if(smsData.getType() == Var.MsgType.SENDING) {
+
+                        // Here you apply the animation when the view is bound
+                        setAnimation(holder.container_v, position);
+                        //TODO (animation)
+                        //create a view listener to take the calculated height and start the bullet and slide animation
                     }
-                    holder.photo_iv.setVisibility(View.VISIBLE);
-                } else {
-                    holder.photo_iv.setVisibility(View.GONE);
+
+                }  else {
+                    holder.bubble_v.setBackgroundResource(R.drawable.bubble2);
+
+                    if (position == getCount() - 1 || getItem(position + 1).getType() == Var.MsgType.SENT) {
+                        if (conversation.getContact() != null) {
+                            Bitmap b = app.getPhotoFromUri(conversation.getContact());
+                            holder.photo_iv.setImageBitmap(b);
+                        } else {
+                            holder.photo_iv.setImageResource(R.drawable.ic_person_grey600_36dp);
+                        }
+                        holder.photo_iv.setVisibility(View.VISIBLE);
+                    } else {
+                        holder.photo_iv.setVisibility(View.GONE);
+                    }
                 }
+
             }
 
-            return convertView;
         }
 
-        class ViewHolder {
+
+        private int lastPosition = -1;
+
+        /**
+         * Here is the key method to apply the animation
+         */
+        private void setAnimation(final View view, final int position)
+        {
+
+            view.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                @Override
+                public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
+                                           int oldTop, int oldRight, int oldBottom) {
+
+                    if (position > lastPosition)
+                    {
+                        // If the bound view wasn't previously displayed on screen, it's animated
+                        Animation animation = new TranslateAnimation(view.getWidth(), 0, 0, 0);
+                        animation.setDuration(1000);
+                        view.startAnimation(animation);
+                        lastPosition = position;
+                    }
+                }
+            });
+
+
+        }
+
+        @Override
+        public int getItemCount() {
+            return smsDataList.size();
+        }
+
+
+        public class ViewHolder extends RecyclerView.ViewHolder {
+
             TextView  name_tv,
                       date_tv,
                       message_tv;
-            View      bubble_v;
+            View      container_v,
+                      bubble_v;
             ImageView photo_iv;
 
+
             public ViewHolder(View view) {
+                super(view);
+                container_v =            view.findViewById(R.id.container_v);
                 message_tv = (TextView)  view.findViewById(R.id.message_tv);
                 name_tv    = (TextView)  view.findViewById(R.id.name_tv);
                 date_tv    = (TextView)  view.findViewById(R.id.date_tv);
@@ -267,7 +335,19 @@ public class Chat extends ActionBarActivity {
             }
         }
 
+
+        public SmsData getItem(int position) {
+            // Read the list backwards (bottom is the newest)
+            return smsDataList.get((getCount() - 1) - position);
+        }
+
+        public int getCount() {
+            return smsDataList.size();
+        }
+
     }
+
+
 
     static class RetrieveChatTask extends AsyncTask<Conversation, Void, Void> {
 
@@ -287,8 +367,6 @@ public class Chat extends ActionBarActivity {
             /* Add data to the conversation list and get a list of smsData that has not been added yet */
             smsDataList = chat.conversation.checkSmsData(nextSmsList);
 
-            //Log.d("Conversation", "chat: " + conversations[0].getSmsDataList().size() + " - " + smsDataList.get(0).getBody());
-
             return null;
         }
 
@@ -297,24 +375,21 @@ public class Chat extends ActionBarActivity {
             super.onPostExecute(aVoid);
 
             // Assumes list is older (not an okay assumption)
-            int index = chat.conversation_lv.getFirstVisiblePosition() + smsDataList.size();
-            View v = chat.conversation_lv.getChildAt(chat.conversation_lv.getHeaderViewsCount());
-            int top = (v == null) ? 0 : v.getTop();
 
             chat.chatState = smsDataList.isEmpty() ? Var.Feed.DONE : Var.Feed.IDLE;
 
             chat.conversationAdapter.smsDataList.addAll(smsDataList);
-
-
             chat.conversationAdapter.notifyDataSetChanged();
 
+            chat.conversation_lv.scrollToPosition(chat.conversationAdapter.smsDataList.size() - 1);
+
             // Use the previous position plus newer items to fake the offset not moving the ListView
-            chat.conversation_lv.setSelectionFromTop(index, top);
+            //chat.conversation_lv.setSelectionFromTop(index, top);
         }
     }
 
 
-    @Override
+/*    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_conversation, menu);
@@ -335,5 +410,5 @@ public class Chat extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
-    }
+    }*/
 }
