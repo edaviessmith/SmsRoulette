@@ -1,5 +1,7 @@
 package com.edaviessmith.sms_roulette;
 
+import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -9,6 +11,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -59,7 +62,7 @@ public class Chat extends ActionBarActivity {
 
         bullet_iv = (ImageView) findViewById(R.id.bullet_iv);
 
-        bullet_iv.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+/*        bullet_iv.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
                                        int oldTop, int oldRight, int oldBottom) {
@@ -67,7 +70,7 @@ public class Chat extends ActionBarActivity {
                 transAnim.setDuration(150);
                 transAnim.setInterpolator(new DecelerateInterpolator());
             }
-        });
+        });*/
 
 
         revolverView = (RevolverView) findViewById(R.id.revolver_v);
@@ -118,8 +121,6 @@ public class Chat extends ActionBarActivity {
 
                         // show the bullet view
 
-                        bullet_iv.setVisibility(View.VISIBLE);
-                        bullet_iv.startAnimation(transAnim);
 
                         // start animation for msg and bullet
 
@@ -256,8 +257,6 @@ public class Chat extends ActionBarActivity {
 
                         // Here you apply the animation when the view is bound
                         setAnimation(holder.container_v, position);
-                        //TODO (animation)
-                        //create a view listener to take the calculated height and start the bullet and slide animation
                     }
 
                 }  else {
@@ -286,27 +285,114 @@ public class Chat extends ActionBarActivity {
         /**
          * Here is the key method to apply the animation
          */
-        private void setAnimation(final View view, final int position)
-        {
+        private void setAnimation(final View view, final int position) {
 
             view.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
                 @Override
                 public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
                                            int oldTop, int oldRight, int oldBottom) {
 
-                    if (position > lastPosition)
-                    {
+                    if (position > lastPosition) {
+                        //TODO (animation)
+                        //create a view listener to take the calculated height and start the bullet and slide animation
+                        int height = view.getHeight();
+
+                        // BULLET ANIMATION
+                        transAnim = new TranslateAnimation(0f, 0f, height, 0f);
+                        transAnim.setDuration(1500);
+                        transAnim.setInterpolator(new DecelerateInterpolator());
+
+                        bullet_iv.getLayoutParams().height = height;
+                        bullet_iv.startAnimation(transAnim);
+                        bullet_iv.setVisibility(View.VISIBLE);
+
+
+                        //LIST ANIMATION
+                        //TODO translate looks ugly and collapsing has issues with current layout params
+                        //collapseView(conversation_lv, conversation_lv.getHeight() - height);
+
+                        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) conversation_lv.getLayoutParams();
+                        //params.removeRule(RelativeLayout.ABOVE);
+                        //params.addRule(RelativeLayout.ABOVE, -1);
+                        conversation_lv.getLayoutParams().height = conversation_lv.getHeight() + height;
+                        conversation_lv.startAnimation(transAnim);
+
+
+                        //MESSAGE ANIMATION
                         // If the bound view wasn't previously displayed on screen, it's animated
                         Animation animation = new TranslateAnimation(view.getWidth(), 0, 0, 0);
+                        animation.setStartOffset(1500);
                         animation.setDuration(1000);
+                        animation.setAnimationListener(new Animation.AnimationListener() {
+                            @Override
+                            public void onAnimationStart(Animation animation) {
+                                view.setVisibility(View.VISIBLE);
+                            }
+
+                            @Override
+                            public void onAnimationEnd(Animation animation) {
+                                /*RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) conversation_lv.getLayoutParams();
+                                params.addRule(RelativeLayout.ABOVE, revolverView.getId());
+                                conversation_lv.clearAnimation();*/
+                            }
+
+                            @Override
+                            public void onAnimationRepeat(Animation animation) {
+                            }
+                        });
+
+                        view.setVisibility(View.INVISIBLE);
                         view.startAnimation(animation);
+
                         lastPosition = position;
                     }
                 }
             });
 
-
         }
+
+
+        // COLLAPSING ANIMATION (should move somewhere cleaner)
+
+        /**
+         * Slide animation
+         *
+         * @param start   start animation from position
+         * @param end     end animation to position
+         * @param summary view to animate
+         * @return valueAnimator
+         */
+        private ValueAnimator slideAnimator(int start, int end, final View summary) {
+
+            ValueAnimator animator = ValueAnimator.ofInt(start, end);
+
+            animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                    //Update Height
+                    int value = (Integer) valueAnimator.getAnimatedValue();
+
+                    ViewGroup.LayoutParams layoutParams = summary.getLayoutParams();
+                    layoutParams.height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PX, value, getResources().getDisplayMetrics());//value;
+                    summary.setLayoutParams(layoutParams);
+                }
+            });
+            return animator;
+        }
+
+        private void collapseView(final View summary, int height) {
+            int finalHeight = summary.getHeight();
+
+            ValueAnimator mAnimator = slideAnimator(finalHeight, height, summary);
+            final int widthSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.EXACTLY);
+            summary.measure(widthSpec, height);
+
+            Animator animator = slideAnimator(summary.getHeight(), height, summary);
+            animator.start();
+            mAnimator.start();
+        }
+
+
 
         @Override
         public int getItemCount() {
