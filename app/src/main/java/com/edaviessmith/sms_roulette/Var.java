@@ -1,5 +1,9 @@
 package com.edaviessmith.sms_roulette;
 
+import android.content.res.Resources;
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
+
 import com.edaviessmith.sms_roulette.data.SmsData;
 
 import java.net.URI;
@@ -16,13 +20,26 @@ import java.util.Locale;
 public class Var {
 
     public enum Category {EMAIL, PHONE}
-
     public enum MsgType {RECEIVED, SENT, DRAFT, SENDING, OTHER}
-
     public enum Feed {IDLE, PENDING, DONE}
+    public enum REV_STATE {IDLE, LOADING, FIRING, SHOT}
 
     public static int LIMIT = 20;
     public static int LIST_OFFSET = 20;
+
+
+    public static int translateTime = 250;
+
+    //Util functions
+
+    public static int getPx(int unit, float size) {
+        DisplayMetrics metrics = Resources.getSystem().getDisplayMetrics();
+        return (int) TypedValue.applyDimension(unit, size, metrics);
+    }
+
+    public static int getDp(int px) {
+        return (int) (px / Resources.getSystem().getDisplayMetrics().density);
+    }
 
 
     public static String getTimeSince(long publishedDate) {

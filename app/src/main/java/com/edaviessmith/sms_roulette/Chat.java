@@ -1,7 +1,5 @@
 package com.edaviessmith.sms_roulette;
 
-import android.animation.Animator;
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -11,15 +9,18 @@ import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.TypedValue;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.edaviessmith.sms_roulette.data.Conversation;
@@ -30,23 +31,25 @@ import java.util.Date;
 import java.util.List;
 
 
-public class Chat extends ActionBarActivity {
+public class Chat extends ActionBarActivity implements View.OnClickListener{
 
     App app;
-
     Conversation conversation;
 
     public ConversationAdapter conversationAdapter;
     public RecyclerView conversation_lv;
     public LinearLayoutManager linearLayoutManager;
 
-
     RevolverView revolverView;
 
-    ImageView bullet_iv;
+    ImageView bullet_iv, send_iv;
+    EditText message_et;
 
-    Var.Feed chatState = Var.Feed.IDLE;
+    Var.Feed     chatState = Var.Feed.IDLE;
+    Var.REV_STATE revState = Var.REV_STATE.IDLE;
 
+    // View heights used in animations
+    int conversationHeight, messageHeight;
     boolean isSendingMsg;
 
     Animation transAnim;
@@ -61,70 +64,39 @@ public class Chat extends ActionBarActivity {
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         bullet_iv = (ImageView) findViewById(R.id.bullet_iv);
+        message_et = (EditText) findViewById(R.id.message_et);
 
-/*        bullet_iv.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-            @Override
-            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
-                                       int oldTop, int oldRight, int oldBottom) {
-                transAnim = new TranslateAnimation(0f, 0f, v.getHeight(), 0f);
-                transAnim.setDuration(150);
-                transAnim.setInterpolator(new DecelerateInterpolator());
-            }
-        });*/
-
+        send_iv = (ImageView) findViewById(R.id.send_iv);
+        send_iv.setOnClickListener(this);
 
         revolverView = (RevolverView) findViewById(R.id.revolver_v);
         revolverView.setOnFireListener(new Listener() {
 
             @Override
             public void onProgress(final float percent) {
-
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if(isSendingMsg) {
+                       /* if(isSendingMsg) {
                             if(percent < 0.2f) isSendingMsg = false;
                         } else {
-
                             RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) conversation_lv.getLayoutParams();
                             int mar = (int) ((1f - percent) * -60);
                             //params.bottomMargin = mar;
 
-
-                            bullet_iv.setVisibility(View.GONE);
-
+                            //bullet_iv.setVisibility(View.GONE);
                             if(transAnim != null) transAnim.cancel();
-
-                        }
+                        }*/
                     }
                 });
             }
 
             @Override
             public void onComplete() {
-
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        String msgText = "This is a test so when I am deving I don't have to continually type a message. It's long to get the full effect of the animation";
-                        //TODO in order
-                        // create the message, add it to the lv, scroll it down
-
-                        //conversation_lv.setSelection(conversationAdapter.getCount() - 1);
-
-                        SmsData newMessage = new SmsData();
-                        newMessage.setBody(msgText);
-                        newMessage.setDate(new Date().getTime());
-                        newMessage.setType(Var.MsgType.SENDING);
-
-                        conversationAdapter.sendSmsMessage(newMessage);
-
-                        // show the bullet view
-
-
-                        // start animation for msg and bullet
-
-                        isSendingMsg = true;
+                        transitionState(Var.REV_STATE.FIRING);
                     }
                 });
             }
@@ -138,24 +110,32 @@ public class Chat extends ActionBarActivity {
         new RetrieveChatTask(Chat.this, Var.LIMIT).execute(conversation);
 
 
-
         conversation_lv = (RecyclerView) findViewById(R.id.conversation_lv);
+        conversation_lv.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+           @Override
+           public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
+                                      int oldTop, int oldRight, int oldBottom) {
+               conversationHeight = conversation_lv.getHeight();
+               conversation_lv.removeOnLayoutChangeListener(this);
+           }
+       });
+
 
         linearLayoutManager = new LinearLayoutManager(this);
-        //linearLayoutManager.setReverseLayout(true);
+        linearLayoutManager.setStackFromEnd(true);
+
         conversation_lv.setLayoutManager(linearLayoutManager);
         conversation_lv.setItemAnimator(new DefaultItemAnimator());
-
 
         conversationAdapter = new ConversationAdapter(this);
         conversation_lv.setAdapter(conversationAdapter);
 
-        /*conversation_lv.setOnScrollListener(new AbsListView.OnScrollListener() {
+        transitionState(Var.REV_STATE.IDLE);
 
+        /*conversation_lv.setOnScrollListener(new AbsListView.OnScrollListener() {
 
             @Override
             public void onScrollStateChanged(AbsListView view, int scrollState) {
-
             }
 
             @Override
@@ -175,14 +155,115 @@ public class Chat extends ActionBarActivity {
     }
 
 
+
+    private void transitionState(Var.REV_STATE newState) {
+
+        revolverView.setVisibility((newState == Var.REV_STATE.IDLE) ? View.GONE: View.VISIBLE);
+
+        if(revState == Var.REV_STATE.IDLE && newState == Var.REV_STATE.LOADING) {
+
+            //Dismiss keyboard
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(message_et.getWindowToken(), 0);
+
+            //Animate Revolver up
+            revolverView.setVisibility(View.VISIBLE);
+            revolverView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                @Override
+                public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
+                                           int oldTop, int oldRight, int oldBottom) {
+
+                    Animation revAnim = new TranslateAnimation(0f, 0f, revolverView.getHeight(), 0f);
+                    revAnim.setDuration(Var.translateTime);
+                    revAnim.setInterpolator(new DecelerateInterpolator());
+                    revolverView.startAnimation(revAnim);
+
+                    app.collapseView(conversation_lv, (conversationHeight - revolverView.getHeight()) + Var.getDp(226));
+
+                    revolverView.removeOnLayoutChangeListener(this);
+                }
+            });
+        }
+
+        if(revState == Var.REV_STATE.LOADING && newState == Var.REV_STATE.FIRING) {
+
+            String msgText = "This is a test so when I am deving I don't have to continually type a message. It's long to get the full effect of the animation";
+
+            // create the message, add it to the lv, scroll it down
+
+            //conversation_lv.setSelection(conversationAdapter.getCount() - 1);
+
+            SmsData newMessage = new SmsData();
+            newMessage.setBody(msgText);
+            newMessage.setDate(new Date().getTime());
+            newMessage.setType(Var.MsgType.SENDING);
+
+            conversationAdapter.sendSmsMessage(newMessage);
+
+            isSendingMsg = true;
+        }
+
+
+        if(revState == Var.REV_STATE.FIRING && newState == Var.REV_STATE.SHOT) {
+
+            Log.d("Firing", "height: "+ messageHeight);
+
+            // BULLET ANIMATION
+            transAnim = new TranslateAnimation(0f, 0f, messageHeight, 0f);
+            transAnim.setDuration(Var.translateTime);
+            transAnim.setInterpolator(new DecelerateInterpolator());
+
+            bullet_iv.getLayoutParams().height = messageHeight;
+            bullet_iv.startAnimation(transAnim);
+            bullet_iv.setVisibility(View.VISIBLE);
+
+            //LIST ANIMATION
+            //TODO translate looks ugly and collapsing has issues with current layout params
+            app.expandView(conversation_lv, conversationHeight - revolverView.getHeight() + messageHeight, true);
+        }
+
+        if(revState == Var.REV_STATE.SHOT && newState == Var.REV_STATE.IDLE) {
+            bullet_iv.setVisibility(View.GONE);
+            transAnim.cancel();
+
+            //Hide the revolver view
+            Animation revAnim = new TranslateAnimation(0f, 0f, 0f, revolverView.getHeight());
+            revAnim.setDuration(Var.translateTime);
+            revAnim.setInterpolator(new DecelerateInterpolator());
+            revAnim.setAnimationListener(new AnimListener() {
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    revolverView.reset();
+                }
+            });
+
+            revolverView.startAnimation(revAnim);
+
+            app.collapseView(conversation_lv, conversationHeight);
+
+        }
+
+        revState = newState;
+    }
+
+
+
+    @Override
+    public void onClick(View v) {
+
+        if(send_iv == v) {
+            transitionState(Var.REV_STATE.LOADING);
+        }
+
+    }
+
+
     public class ConversationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements View.OnClickListener {
 
         private LayoutInflater inflater;
         public List<SmsData> smsDataList;
-        private Context context;
 
         public ConversationAdapter(Context context) {
-            this.context = context;
             inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             smsDataList = Var.sortedSmsData(conversation.getSmsDataList());
         }
@@ -190,9 +271,7 @@ public class Chat extends ActionBarActivity {
         public void sendSmsMessage(SmsData smsMessage) {
             smsDataList.add(0, smsMessage);
             conversation_lv.scrollToPosition(smsDataList.size() - 1);
-
         }
-
 
 
         private static final int TYPE_RECEIVED = 0;
@@ -202,16 +281,12 @@ public class Chat extends ActionBarActivity {
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int i) {
-            View v = null;
-            /*if (i == TYPE_RECEIVED) v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_chat_receive, viewGroup, false);
-            else if (i == TYPE_SENT) v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_chat, viewGroup, false);
-            else if (i == TYPE_SHOT) v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_chat, viewGroup, false);*/
+            View v;
 
             if (i == TYPE_RECEIVED)
                 v = inflater.inflate(R.layout.item_chat_receive, viewGroup, false);
             else
                 v = inflater.inflate(R.layout.item_chat, viewGroup, false);
-            // LayoutInflater.from(viewGroup.getContext())
 
             if(v != null) v.setOnClickListener(this);
             return new ViewHolder(v);
@@ -220,7 +295,6 @@ public class Chat extends ActionBarActivity {
         @Override
         public int getItemViewType(int position) {
 
-            //if(getItem(position).getType() == Var.MsgType.SENDING) return TYPE_SENT;
             if(getItem(position).getType() == Var.MsgType.RECEIVED) return TYPE_RECEIVED;
 
             return TYPE_SENT;
@@ -295,34 +369,19 @@ public class Chat extends ActionBarActivity {
                     if (position > lastPosition) {
                         //TODO (animation)
                         //create a view listener to take the calculated height and start the bullet and slide animation
-                        int height = view.getHeight();
-
-                        // BULLET ANIMATION
-                        transAnim = new TranslateAnimation(0f, 0f, height, 0f);
-                        transAnim.setDuration(1500);
-                        transAnim.setInterpolator(new DecelerateInterpolator());
-
-                        bullet_iv.getLayoutParams().height = height;
-                        bullet_iv.startAnimation(transAnim);
-                        bullet_iv.setVisibility(View.VISIBLE);
+                        messageHeight = view.getHeight();
 
 
-                        //LIST ANIMATION
-                        //TODO translate looks ugly and collapsing has issues with current layout params
-                        //collapseView(conversation_lv, conversation_lv.getHeight() - height);
-
-                        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) conversation_lv.getLayoutParams();
-                        //params.removeRule(RelativeLayout.ABOVE);
-                        //params.addRule(RelativeLayout.ABOVE, -1);
-                        conversation_lv.getLayoutParams().height = conversation_lv.getHeight() + height;
-                        conversation_lv.startAnimation(transAnim);
+                        transitionState(Var.REV_STATE.SHOT);
 
 
                         //MESSAGE ANIMATION
+
                         // If the bound view wasn't previously displayed on screen, it's animated
                         Animation animation = new TranslateAnimation(view.getWidth(), 0, 0, 0);
                         animation.setStartOffset(1500);
-                        animation.setDuration(1000);
+                        animation.setDuration(Var.translateTime);
+
                         animation.setAnimationListener(new Animation.AnimationListener() {
                             @Override
                             public void onAnimationStart(Animation animation) {
@@ -331,9 +390,7 @@ public class Chat extends ActionBarActivity {
 
                             @Override
                             public void onAnimationEnd(Animation animation) {
-                                /*RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) conversation_lv.getLayoutParams();
-                                params.addRule(RelativeLayout.ABOVE, revolverView.getId());
-                                conversation_lv.clearAnimation();*/
+                                transitionState(Var.REV_STATE.IDLE);
                             }
 
                             @Override
@@ -344,54 +401,13 @@ public class Chat extends ActionBarActivity {
                         view.setVisibility(View.INVISIBLE);
                         view.startAnimation(animation);
 
+
                         lastPosition = position;
                     }
                 }
             });
 
         }
-
-
-        // COLLAPSING ANIMATION (should move somewhere cleaner)
-
-        /**
-         * Slide animation
-         *
-         * @param start   start animation from position
-         * @param end     end animation to position
-         * @param summary view to animate
-         * @return valueAnimator
-         */
-        private ValueAnimator slideAnimator(int start, int end, final View summary) {
-
-            ValueAnimator animator = ValueAnimator.ofInt(start, end);
-
-            animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                    //Update Height
-                    int value = (Integer) valueAnimator.getAnimatedValue();
-
-                    ViewGroup.LayoutParams layoutParams = summary.getLayoutParams();
-                    layoutParams.height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PX, value, getResources().getDisplayMetrics());//value;
-                    summary.setLayoutParams(layoutParams);
-                }
-            });
-            return animator;
-        }
-
-        private void collapseView(final View summary, int height) {
-            int finalHeight = summary.getHeight();
-
-            ValueAnimator mAnimator = slideAnimator(finalHeight, height, summary);
-            final int widthSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.EXACTLY);
-            summary.measure(widthSpec, height);
-
-            Animator animator = slideAnimator(summary.getHeight(), height, summary);
-            animator.start();
-            mAnimator.start();
-        }
-
 
 
         @Override
@@ -461,21 +477,17 @@ public class Chat extends ActionBarActivity {
             super.onPostExecute(aVoid);
 
             // Assumes list is older (not an okay assumption)
-
             chat.chatState = smsDataList.isEmpty() ? Var.Feed.DONE : Var.Feed.IDLE;
 
             chat.conversationAdapter.smsDataList.addAll(smsDataList);
             chat.conversationAdapter.notifyDataSetChanged();
 
             chat.conversation_lv.scrollToPosition(chat.conversationAdapter.smsDataList.size() - 1);
-
-            // Use the previous position plus newer items to fake the offset not moving the ListView
-            //chat.conversation_lv.setSelectionFromTop(index, top);
         }
     }
 
 
-/*    @Override
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_conversation, menu);
@@ -496,5 +508,5 @@ public class Chat extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
-    }*/
+    }
 }

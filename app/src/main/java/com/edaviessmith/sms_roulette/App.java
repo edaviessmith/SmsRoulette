@@ -2,6 +2,8 @@ package com.edaviessmith.sms_roulette;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.app.Application;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -14,6 +16,9 @@ import android.net.Uri;
 import android.os.Handler;
 import android.provider.ContactsContract;
 import android.util.Patterns;
+import android.util.TypedValue;
+import android.view.View;
+import android.view.ViewGroup;
 
 import com.edaviessmith.sms_roulette.data.Contact;
 import com.edaviessmith.sms_roulette.data.Conversation;
@@ -325,4 +330,60 @@ public class App extends Application {
             super.onChange(selfChange);
         }
     }
+
+
+
+    // COLLAPSING ANIMATION (should move somewhere cleaner)
+
+    /**
+     * Slide animation
+     *
+     * @param start   start animation from position
+     * @param end     end animation to position
+     * @param summary view to animate
+     * @return valueAnimator
+     */
+    public ValueAnimator slideAnimator(int start, int end, final View summary) {
+
+        ValueAnimator animator = ValueAnimator.ofInt(start, end);
+
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                //Update Height
+                int value = (Integer) valueAnimator.getAnimatedValue();
+
+                ViewGroup.LayoutParams layoutParams = summary.getLayoutParams();
+                layoutParams.height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PX, value, getResources().getDisplayMetrics());//value;
+                summary.setLayoutParams(layoutParams);
+            }
+        });
+        return animator;
+    }
+
+    public void collapseView(final View summary, int height) {
+        int finalHeight = summary.getHeight();
+
+        ValueAnimator mAnimator = slideAnimator(finalHeight, height, summary);
+        mAnimator.setDuration(Var.translateTime);
+        final int widthSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.EXACTLY);
+        summary.measure(widthSpec, height);
+
+        Animator animator = slideAnimator(summary.getHeight(), height, summary);
+        animator.setDuration(Var.translateTime);
+        animator.start();
+        mAnimator.start();
+    }
+
+    public void expandView(View summary, int height, final boolean isSearch) {
+        if (isSearch) summary.setVisibility(View.VISIBLE);
+
+        final int widthSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.EXACTLY);
+        summary.measure(widthSpec, height);
+
+        Animator animator = slideAnimator(summary.getHeight(), height, summary);
+        animator.setDuration(Var.translateTime);
+        animator.start();
+    }
+
 }

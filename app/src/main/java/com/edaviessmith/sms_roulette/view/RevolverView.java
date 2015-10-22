@@ -261,6 +261,10 @@ public class RevolverView extends SurfaceView implements SurfaceHolder.Callback 
         this.onFireListener = onFireListener;
     }
 
+    public void reset() {
+        rev.animStep = 0f;
+    }
+
 
     public class SurfaceThread extends Thread {
 
