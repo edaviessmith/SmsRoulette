@@ -352,25 +352,33 @@ public class App extends Application {
             public void onAnimationUpdate(ValueAnimator valueAnimator) {
                 //Update Height
                 int value = (Integer) valueAnimator.getAnimatedValue();
-
-                ViewGroup.LayoutParams layoutParams = summary.getLayoutParams();
-                layoutParams.height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PX, value, getResources().getDisplayMetrics());//value;
-                summary.setLayoutParams(layoutParams);
+                int height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_PX, value, getContext().getResources().getDisplayMetrics());
+                setViewHeight(summary, height);
             }
         });
         return animator;
     }
 
+
     public void collapseView(final View summary, int height) {
         int finalHeight = summary.getHeight();
 
-        ValueAnimator mAnimator = slideAnimator(finalHeight, height, summary);
+        final ValueAnimator mAnimator = slideAnimator(finalHeight, height, summary);
         mAnimator.setDuration(Var.translateTime);
         final int widthSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.EXACTLY);
         summary.measure(widthSpec, height);
 
         Animator animator = slideAnimator(summary.getHeight(), height, summary);
         animator.setDuration(Var.translateTime);
+        animator.addListener(new AnimListener() {
+            @Override
+            public void onAnimationEnd(Animator animator) {
+                animator.cancel();
+                mAnimator.cancel();
+                summary.clearAnimation();
+            }
+        });
+
         animator.start();
         mAnimator.start();
     }
@@ -386,4 +394,11 @@ public class App extends Application {
         animator.start();
     }
 
+
+    public void setViewHeight(View view, int height) {
+        ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
+        layoutParams.height = height;
+        view.setLayoutParams(layoutParams);
+        view.requestLayout();
+    }
 }

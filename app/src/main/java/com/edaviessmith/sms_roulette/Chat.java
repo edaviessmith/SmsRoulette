@@ -9,12 +9,12 @@ import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
@@ -111,14 +111,22 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
 
 
         conversation_lv = (RecyclerView) findViewById(R.id.conversation_lv);
-        conversation_lv.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+        conversation_lv.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                conversationHeight = conversation_lv.getHeight();
+                conversation_lv.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+            }
+        });
+
+       /* conversation_lv.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
            @Override
            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
                                       int oldTop, int oldRight, int oldBottom) {
                conversationHeight = conversation_lv.getHeight();
                conversation_lv.removeOnLayoutChangeListener(this);
            }
-       });
+       });*/
 
 
         linearLayoutManager = new LinearLayoutManager(this);
@@ -154,13 +162,32 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
 
     }
 
+    /**
+     * Util method to check if the next state is the next transition
+     * @return true if newState is the nextState and revState is the previous state
+     */
+    private boolean isNextState(Var.REV_STATE newState, Var.REV_STATE nextState) {
 
+        if(newState == nextState) {
+            switch (newState) {
+                case LOADING:
+                    return revState == Var.REV_STATE.IDLE;
+                case FIRING:
+                    return revState == Var.REV_STATE.LOADING;
+                case SHOT:
+                    return revState == Var.REV_STATE.FIRING;
+                case IDLE:
+                    return revState == Var.REV_STATE.SHOT;
+            }
+        }
+        return false;
+    }
 
     private void transitionState(Var.REV_STATE newState) {
 
         revolverView.setVisibility((newState == Var.REV_STATE.IDLE) ? View.GONE: View.VISIBLE);
 
-        if(revState == Var.REV_STATE.IDLE && newState == Var.REV_STATE.LOADING) {
+        if(isNextState(newState, Var.REV_STATE.LOADING)) {
 
             //Dismiss keyboard
             InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -168,24 +195,25 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
 
             //Animate Revolver up
             revolverView.setVisibility(View.VISIBLE);
-            revolverView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-                @Override
-                public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
-                                           int oldTop, int oldRight, int oldBottom) {
 
+            revolverView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
                     Animation revAnim = new TranslateAnimation(0f, 0f, revolverView.getHeight(), 0f);
                     revAnim.setDuration(Var.translateTime);
                     revAnim.setInterpolator(new DecelerateInterpolator());
                     revolverView.startAnimation(revAnim);
 
-                    app.collapseView(conversation_lv, (conversationHeight - revolverView.getHeight()) + Var.getDp(226));
+                    //TODO removed animation to see if that obstructs setting height
+                    //animatorConversation = app.collapseView(conversation_lv, (conversationHeight - revolverView.getHeight()) + Var.getDp(226));
+                    app.setViewHeight(conversation_lv, (conversationHeight - revolverView.getHeight()) + Var.getDp(226));
 
-                    revolverView.removeOnLayoutChangeListener(this);
+                    revolverView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
                 }
             });
         }
 
-        if(revState == Var.REV_STATE.LOADING && newState == Var.REV_STATE.FIRING) {
+        if(isNextState(newState, Var.REV_STATE.FIRING)) {
 
             String msgText = "This is a test so when I am deving I don't have to continually type a message. It's long to get the full effect of the animation";
 
@@ -204,10 +232,9 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
         }
 
 
-        if(revState == Var.REV_STATE.FIRING && newState == Var.REV_STATE.SHOT) {
+        if(isNextState(newState, Var.REV_STATE.SHOT)) {
 
-            Log.d("Firing", "height: "+ messageHeight);
-
+            //TODO convert the bullet (pole) into a 9 patch to hide the translating view (or find another way)
             // BULLET ANIMATION
             transAnim = new TranslateAnimation(0f, 0f, messageHeight, 0f);
             transAnim.setDuration(Var.translateTime);
@@ -218,13 +245,24 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
             bullet_iv.setVisibility(View.VISIBLE);
 
             //LIST ANIMATION
-            //TODO translate looks ugly and collapsing has issues with current layout params
-            app.expandView(conversation_lv, conversationHeight - revolverView.getHeight() + messageHeight, true);
+            final int height = conversation_lv.getHeight();
+            app.setViewHeight(conversation_lv, height + messageHeight);
+
+            conversation_lv.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+
+                    app.collapseView(conversation_lv, height);
+                    conversation_lv.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+                }
+            });
+
+
         }
 
-        if(revState == Var.REV_STATE.SHOT && newState == Var.REV_STATE.IDLE) {
+        if(isNextState(newState, Var.REV_STATE.IDLE)) {
             bullet_iv.setVisibility(View.GONE);
-            transAnim.cancel();
+            //transAnim.cancel();
 
             //Hide the revolver view
             Animation revAnim = new TranslateAnimation(0f, 0f, 0f, revolverView.getHeight());
@@ -239,8 +277,7 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
 
             revolverView.startAnimation(revAnim);
 
-            app.collapseView(conversation_lv, conversationHeight);
-
+            app.expandView(conversation_lv, conversationHeight, true);
         }
 
         revState = newState;
@@ -271,6 +308,7 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
         public void sendSmsMessage(SmsData smsMessage) {
             smsDataList.add(0, smsMessage);
             conversation_lv.scrollToPosition(smsDataList.size() - 1);
+            //notifyItemInserted(smsDataList.size() - 1);
         }
 
 
@@ -354,6 +392,7 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
         }
 
 
+
         private int lastPosition = -1;
 
         /**
@@ -361,28 +400,24 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
          */
         private void setAnimation(final View view, final int position) {
 
-            view.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            view.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+
                 @Override
-                public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft,
-                                           int oldTop, int oldRight, int oldBottom) {
-
+                public boolean onPreDraw() {
                     if (position > lastPosition) {
-                        //TODO (animation)
-                        //create a view listener to take the calculated height and start the bullet and slide animation
+                        // Create a view listener to take the calculated height and start the bullet and slide animation
                         messageHeight = view.getHeight();
-
 
                         transitionState(Var.REV_STATE.SHOT);
 
-
-                        //MESSAGE ANIMATION
+                        // MESSAGE ANIMATION
 
                         // If the bound view wasn't previously displayed on screen, it's animated
                         Animation animation = new TranslateAnimation(view.getWidth(), 0, 0, 0);
                         animation.setStartOffset(1500);
                         animation.setDuration(Var.translateTime);
 
-                        animation.setAnimationListener(new Animation.AnimationListener() {
+                        animation.setAnimationListener(new AnimListener() {
                             @Override
                             public void onAnimationStart(Animation animation) {
                                 view.setVisibility(View.VISIBLE);
@@ -392,10 +427,6 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
                             public void onAnimationEnd(Animation animation) {
                                 transitionState(Var.REV_STATE.IDLE);
                             }
-
-                            @Override
-                            public void onAnimationRepeat(Animation animation) {
-                            }
                         });
 
                         view.setVisibility(View.INVISIBLE);
@@ -404,6 +435,10 @@ public class Chat extends ActionBarActivity implements View.OnClickListener{
 
                         lastPosition = position;
                     }
+
+                    view.getViewTreeObserver().removeOnPreDrawListener(this);
+
+                    return false;
                 }
             });
 
